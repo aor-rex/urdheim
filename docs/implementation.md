@@ -33,7 +33,8 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
 
 ## Phase 1 — The Watcher (reader shell)
 
-- Shell reader account: random handle, no follows, no posts. Cookies on server.
+- Reader = existing @ryu_ngmi session (owner accepted the blast-radius risk).
+  Poster = separate Heimdall shell, never scrapes. Cookies on server.
 - Seed 50–100 Solana callers, tiered:
   - Tier 1 (~20 by reach): poll every 2–5 min
   - Tier 2 (rest): poll every 15–30 min
@@ -66,7 +67,8 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
   - `/caller/<handle>`: every call with price-then/now, post links, verdict
   - `/coin/<mint>`: every tracked caller who touched it
   - `/snitch`: paste post link → `submissions`
-- FastAPI + Jinja or static export; free-tier hosting.
+- Next.js (static export) in `web-next/` — one data file renders all pages.
+  Old static mockups kept in `web/` for reference.
 
 ## Phase 4 — Heimdall (poster shell)
 
