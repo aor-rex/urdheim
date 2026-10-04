@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0c0a08;color:#e8e0cf;font-family:Georgia,'Times New Roman',serif;padding:48px 0 80px}
+.wrap{max-width:880px;margin:0 auto;padding:0 28px}
+.eyebrow{text-align:center;letter-spacing:6px;font-size:12px;color:#c9a227;font-family:Verdana,sans-serif}
+h1{text-align:center;font-size:56px;letter-spacing:10px;margin:12px 0 4px;font-weight:400}
+.sub{text-align:center;color:#8a7f63;font-style:italic;margin-bottom:8px}
+.runes{text-align:center;color:#5a4f35;letter-spacing:14px;font-size:18px;margin:18px 0 34px}
+.thread{height:1px;background:linear-gradient(90deg,transparent,#c9a227,transparent);margin:0 0 34px}
+.tabs{display:flex;gap:8px;justify-content:center;margin-bottom:30px;font-family:Verdana,sans-serif}
+.tabs button{background:transparent;border:1px solid #4a4132;color:#b7a67f;padding:9px 26px;font-size:13px;letter-spacing:2px;cursor:pointer;border-radius:2px}
+.tabs button.on{background:#c9a227;border-color:#c9a227;color:#0c0a08;font-weight:700}
+.row{padding:20px 22px;border:1px solid #2b2519;border-radius:4px;margin-bottom:12px;background:#121009;cursor:pointer;transition:border-color .2s}
+.row:hover{border-color:#c9a227}
+.row.open{border-color:#c9a227}
+.top{display:flex;align-items:center;gap:18px}
+.rank{font-size:30px;color:#5a4f35;width:52px;font-style:italic}
+.info{flex:1}
+.info .h{font-size:21px;color:#f2ead6}
+.info .m{font-size:13px;color:#8a7f63;margin-top:3px;font-family:Verdana,sans-serif}
+.stats{display:flex;gap:22px;font-family:Verdana,sans-serif;font-size:12px;color:#8a7f63}
+.stats b{display:block;font-size:19px;font-family:Georgia,serif}
+.g{color:#7fb069}.r{color:#c1443c}
+.seal{font-family:Verdana,sans-serif;font-size:11px;letter-spacing:3px;padding:7px 14px;border-radius:2px;border:1px solid;white-space:nowrap}
+.seal.guilty{color:#c1443c;border-color:#c1443c}
+.seal.clean{color:#7fb069;border-color:#7fb069}
+.seal.mixed{color:#c9a227;border-color:#c9a227}
+.detail{display:none;margin-top:16px;border-top:1px solid #2b2519;padding-top:16px}
+.row.open .detail{display:block}
+.verdict{font-style:italic;font-size:15.5px;line-height:1.65;color:#cfc3a4}
+.worst{margin-top:12px;font-family:Verdana,sans-serif;font-size:12.5px;color:#9a8c6c;border-left:2px solid #c1443c;padding:8px 12px;background:#00000044}
+.worst.good{border-color:#7fb069}
+.worst u{color:#c9a227;cursor:pointer}
+.calls{margin-top:12px;font-family:Verdana,sans-serif;font-size:12.5px}
+.calls div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #2b2519;color:#9a8c6c}
+.hint{text-align:right;font-family:Verdana,sans-serif;font-size:11px;color:#5a4f35;margin-top:10px;letter-spacing:1px}
+.foot{text-align:center;color:#5a4f35;font-size:13px;font-style:italic;margin-top:36px}
+.hidden{display:none}
+.nav{display:flex;align-items:center;gap:26px;padding:16px 32px;border-bottom:1px solid #2b2519;font-family:Verdana,sans-serif;font-size:13px;letter-spacing:2px;margin:-48px 0 0}
+.nav .logo{font-family:Georgia,serif;font-size:20px;letter-spacing:5px;color:#f2ead6;text-decoration:none}
+.nav a{color:#9a8c6c;text-decoration:none}.nav a:hover{color:#c9a227}
+.nav .on{color:#c9a227}
+.nav .x{margin-left:auto;border:1px solid #c9a227;color:#c9a227;padding:8px 18px;border-radius:3px}
+.lead{max-width:880px;margin:0 auto;padding:44px 28px 0}
+</style></head><body>
+<div class="nav"><a class="logo" href="index.html">URDHEIM</a><a class="on" href="leaderboard.html">LEADERBOARD</a><a href="snitch.html">SNITCH</a><a class="x" href="https://x.com/Urdheim">FOLLOW HEIMDALL</a></div>
+<div class="lead">
+<div class="wrap">
+<div class="eyebrow">THE ETERNAL RECORD</div>
+<h1>URDHEIM</h1>
+<div class="sub">every call remembered &middot; every rug written in stone</div>
+<div class="runes">&#5838;&#5839;&#5846; &middot; &#5840;&#5846;&#5839;</div>
+<div class="thread"></div>
+<div class="tabs">
+<button class="on" onclick="show('all',this)">ALL CALLERS</button>
+<button onclick="show('guilty',this)">CONDEMNED</button>
+<button onclick="show('clean',this)">VINDICATED</button>
+</div>
+<div id="list">
+<div class="row" data-k="guilty" onclick="this.classList.toggle('open')"><div class="top"><div class="rank">I</div><div class="info"><div class="h">@pumporacle</div><div class="m">41 calls &middot; 3 green &middot; avg &minus;93%</div></div><div class="stats"><span><b class="r">3</b>green</span><span><b class="r">38</b>red</span></div><div class="seal guilty">CONDEMNED</div></div><div class="detail"><div class="verdict">Calls like he's paid per post. 38 of 41 picks rugged, worst was $DUMP at &minus;99.8% in four hours. Nothing green in three months.</div><div class="worst">worst call: <b>$DUMP</b> $0.041 &rarr; $0.00008 (&minus;99.8%) &middot; <u>receipt</u></div><div class="calls"><div><span>$DUMP &middot; oct 1</span><span class="r">&minus;99.8%</span></div><div><span>$RUGPOT &middot; sep 28</span><span class="r">&minus;97%</span></div><div><span>$MOONBAG &middot; sep 21</span><span class="g">+34%</span></div></div><div class="hint">TAP TO CLOSE</div></div></div>
+<div class="row" data-k="guilty" onclick="this.classList.toggle('open')"><div class="top"><div class="rank">II</div><div class="info"><div class="h">@Cryptoceleb1</div><div class="m">23 calls &middot; 4 green &middot; avg &minus;81%</div></div><div class="stats"><span><b class="r">4</b>green</span><span><b class="r">19</b>red</span></div><div class="seal guilty">CONDEMNED</div></div><div class="detail"><div class="verdict">Promoted $SUNUSI twice — once on the way up, once on the way down. Only green call in four months was a lucky bounce. Verdict: fade everything.</div><div class="worst">worst call: <b>$SUNUSI</b> $3.7M mcap &rarr; $32k (&minus;99%) &middot; <u>receipt</u></div><div class="calls"><div><span>$SUNUSI &middot; jul 13</span><span class="r">&minus;99%</span></div><div><span>$TIWICAT &middot; jun 30</span><span class="r">&minus;100%</span></div><div><span>$GTAN &middot; aug 2</span><span class="g">+18%</span></div></div><div class="hint">TAP TO CLOSE</div></div></div>
+<div class="row" data-k="guilty" onclick="this.classList.toggle('open')"><div class="top"><div class="rank">III</div><div class="info"><div class="h">@solanashillz</div><div class="m">27 calls &middot; 6 green &middot; avg &minus;64%</div></div><div class="stats"><span><b class="r">6</b>green</span><span><b class="r">21</b>red</span></div><div class="seal guilty">CONDEMNED</div></div><div class="detail"><div class="verdict">Volume shiller — 27 calls and almost nothing survived. Follows whatever is already pumping and calls the top with eerie consistency.</div><div class="worst">worst call: <b>$RUGPOT</b> $1.1M mcap &rarr; $30k (&minus;97%) &middot; <u>receipt</u></div><div class="calls"><div><span>$RUGPOT &middot; sep 25</span><span class="r">&minus;97%</span></div><div><span>$FADEME &middot; sep 12</span><span class="r">&minus;91%</span></div></div><div class="hint">TAP TO CLOSE</div></div></div>
+<div class="row" data-k="clean" onclick="this.classList.toggle('open')"><div class="top"><div class="rank">IV</div><div class="info"><div class="h">@Tally__DE</div><div class="m">18 calls &middot; 11 green &middot; avg +62%</div></div><div class="stats"><span><b class="g">11</b>green</span><span><b class="r">7</b>red</span></div><div class="seal mixed">UNDECIDED</div></div><div class="detail"><div class="verdict">Solid more often than not, but the reds are violent — when wrong, spectacularly wrong. Size down and you'll survive following.</div><div class="worst">worst call: <b>$DIP</b> $0.9M mcap &rarr; $0.1M (&minus;88%) &middot; <u>receipt</u></div><div class="calls"><div><span>$ORBIT &middot; sep 15</span><span class="g">+410%</span></div><div><span>$DIP &middot; sep 9</span><span class="r">&minus;88%</span></div></div><div class="hint">TAP TO CLOSE</div></div></div>
+<div class="row" data-k="clean" onclick="this.classList.toggle('open')"><div class="top"><div class="rank">V</div><div class="info"><div class="h">@chartdruid</div><div class="m">12 calls &middot; 9 green &middot; avg +88%</div></div><div class="stats"><span><b class="g">9</b>green</span><span><b class="r">3</b>red</span></div><div class="seal clean">VINDICATED</div></div><div class="detail"><div class="verdict">Patient entries, posted exits, small reds. The quietest good record on the board.</div><div class="worst good">best call: <b>$LOOM</b> $0.3M mcap &rarr; $1.2M (+290%) &middot; <u>receipt</u></div><div class="calls"><div><span>$LOOM &middot; sep 20</span><span class="g">+290%</span></div><div><span>$SLIP &middot; sep 5</span><span class="r">&minus;41%</span></div></div><div class="hint">TAP TO CLOSE</div></div></div>
+<div class="row" data-k="clean" onclick="this.classList.toggle('open')"><div class="top"><div class="rank">VI</div><div class="info"><div class="h">@degenreck</div><div class="m">31 calls &middot; 22 green &middot; avg +140%</div></div><div class="stats"><span><b class="g">22</b>green</span><span><b class="r">9</b>red</span></div><div class="seal clean">VINDICATED</div></div><div class="detail"><div class="verdict">The one to watch. 22 of 31 green, calls early, exits posted. $VAULT at +620% is the best tracked call on the board.</div><div class="worst good">best call: <b>$VAULT</b> $0.2M mcap &rarr; $1.4M (+620%) &middot; <u>receipt</u></div><div class="calls"><div><span>$VAULT &middot; sep 18</span><span class="g">+620%</span></div><div><span>$FALL &middot; sep 2</span><span class="r">&minus;52%</span></div></div><div class="hint">TAP TO CLOSE</div></div></div>
+</div>
+<div class="foot">tap a row to open its file &middot; what is written here cannot be unwritten</div>
+</div>
+</div>
+<script>
+function show(k,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.querySelectorAll('.row').forEach(r=>{r.classList.toggle('hidden',k!=='all'&&r.dataset.k!==k);});}
+</script>
+</body></html>

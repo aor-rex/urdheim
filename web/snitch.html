@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0c0a08;color:#e8e0cf;font-family:Georgia,serif;padding-bottom:80px}
+.nav{display:flex;align-items:center;gap:26px;padding:16px 32px;border-bottom:1px solid #2b2519;font-family:Verdana,sans-serif;font-size:13px;letter-spacing:2px}
+.nav .logo{font-family:Georgia,serif;font-size:20px;letter-spacing:5px;color:#f2ead6;text-decoration:none}
+.nav a{color:#9a8c6c;text-decoration:none}.nav a:hover{color:#c9a227}
+.nav .on{color:#c9a227}
+.nav .x{margin-left:auto;border:1px solid #c9a227;color:#c9a227;padding:8px 18px;border-radius:3px}
+.wrap{max-width:640px;margin:0 auto;padding:60px 28px 0;text-align:center}
+.eyebrow{letter-spacing:6px;font-size:12px;color:#c9a227;font-family:Verdana,sans-serif}
+h1{font-size:48px;font-weight:400;margin:14px 0 8px}
+.sub{font-style:italic;color:#9a8c6c;line-height:1.7}
+form{margin-top:36px;text-align:left}
+label{display:block;font-family:Verdana,sans-serif;font-size:11px;letter-spacing:2px;color:#8a7f63;margin:20px 0 8px}
+input{width:100%;background:#121009;border:1px solid #2b2519;border-radius:4px;color:#f2ead6;padding:14px 16px;font-size:15px;font-family:Verdana,sans-serif;outline:none}
+input:focus{border-color:#c9a227}
+.turnstile{border:1px dashed #4a4132;border-radius:4px;padding:22px;margin-top:22px;font-family:Verdana,sans-serif;font-size:13px;color:#8a7f63}
+button{width:100%;margin-top:22px;background:#c9a227;color:#0c0a08;font-weight:700;font-family:Verdana,sans-serif;font-size:13px;letter-spacing:2px;padding:16px;border:none;border-radius:3px;cursor:pointer}
+.rules{margin-top:30px;text-align:left;font-style:italic;color:#8a7f63;font-size:14px;line-height:1.9}
+.rules b{color:#c9a227}
+.done{display:none;margin-top:36px;border:1px solid #7fb069;border-radius:4px;padding:30px;background:#0e140d}
+.done h2{font-size:24px;font-weight:400;color:#7fb069}
+.done p{font-style:italic;color:#9a8c6c;margin-top:10px;line-height:1.7}
+footer{max-width:880px;margin:60px auto 0;padding:26px 28px;border-top:1px solid #2b2519;display:flex;gap:24px;font-family:Verdana,sans-serif;font-size:12px;letter-spacing:1px;color:#5a4f35}
+footer a{color:#8a7f63;text-decoration:none}
+</style></head><body>
+<div class="nav"><a class="logo" href="index.html">URDHEIM</a><a href="leaderboard.html">LEADERBOARD</a><a class="on" href="snitch.html">SNITCH</a><a class="x" href="https://x.com/Urdheim">FOLLOW HEIMDALL</a></div>
+<div class="wrap" id="form">
+<div class="eyebrow">THE INFORMANT'S DOOR</div>
+<h1>Snitch a call</h1>
+<div class="sub">Paste the post. We verify it, snapshot the price,<br>and the record grows. No account, no name taken.</div>
+<form onsubmit="return go(event)">
+<label>POST LINK</label>
+<input id="u" placeholder="https://x.com/someone/status/..." required>
+<label>CALLER'S HANDLE (IF KNOWN)</label>
+<input placeholder="@someone">
+<div class="turnstile">[ cloudflare turnstile widget goes here ]</div>
+<button type="submit">FILE IT IN THE RECORD</button>
+</form>
+<div class="rules">The house rules, plainly:<br><b>1.</b> It must be a real post with a real call — fakes go in the bin.<br><b>2.</b> Your snitch only nominates for tracking — the detective writes the verdict, never votes.<br><b>3.</b> Three separate snitches puts a caller on the watchlist.</div>
+</div>
+<div class="wrap" id="ok" style="display:none">
+<div class="done"><h2>Filed.</h2><p>The detective will read the post, check for a real call, and snapshot the price if it qualifies. If this caller is new, two more snitches puts them on the watchlist.</p></div>
+</div>
+<footer><span>URDHEIM &mdash; what is written cannot be unwritten</span><span style="margin-left:auto"></span><a href="leaderboard.html">LEADERBOARD</a><a href="snitch.html">SNITCH</a><a href="https://x.com/Urdheim">X ACCOUNT</a></footer>
+<script>
+function go(e){e.preventDefault();document.getElementById('form').style.display='none';document.getElementById('ok').style.display='block';return false;}
+</script>
+</body></html>
