@@ -40,3 +40,11 @@ CREATE TABLE IF NOT EXISTS submissions (
   status           TEXT NOT NULL DEFAULT 'pending',  -- pending|accepted|rejected
   created_at       TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS poster_log (
+  id         SERIAL PRIMARY KEY,
+  job        TEXT NOT NULL,   -- flop | listing | siren | recap
+  text       TEXT NOT NULL,
+  tweet_id   TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
