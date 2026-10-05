@@ -1,11 +1,17 @@
-"""Urdheim watcher: poll tracked callers, regex for CAs + call language,
-snapshot price on match, queue for the detective. Read-only, never posts."""
+"""Urdheim stream watcher: twitterapi.io WebSocket filter stream over tracked
+callers -> CA/call-word regex -> DexScreener snapshot -> queue for detective.
+
+Read path needs no cookies, no shells, no polling. One API key, sub-second.
+"""
+import asyncio
 import json
 import os
 import re
-import time
 
 import httpx
+
+API = "https://api.twitterapi.io"
+WS = "wss://ws.twitterapi.io/twitter/tweet/stream"
 
 BASE58 = r"[1-9A-HJ-NP-Za-km-z]{32,44}"
 CA_RE = re.compile(BASE58)
@@ -14,7 +20,7 @@ CALL_WORDS = re.compile(
     re.I,
 )
 
-POLL = {1: 180, 2: 900, 3: 1800}  # seconds per tier
+CHUNK = 40  # handles per filter rule (tune live against rule length limits)
 
 
 def find_cas(text: str) -> list[str]:
@@ -43,40 +49,94 @@ def snapshot_price(mint: str) -> dict | None:
         return None
 
 
+def headers() -> dict:
+    return {"X-API-Key": os.environ["TWITTERAPI_KEY"]}
+
+
+def chunk_rules(handles: list[str]) -> list[str]:
+    rules = []
+    for i in range(0, len(handles), CHUNK):
+        group = handles[i : i + CHUNK]
+        rules.append(" OR ".join(f"from:{h}" for h in group))
+    return rules
+
+
+def set_rules(rules: list[str]) -> None:
+    # replace existing rules, then add ours (adjust to actual rule API)
+    httpx.post(f"{API}/oapi/tweet_filter/add_rule",
+               headers=headers(), json={"rules": rules}, timeout=30).raise_for_status()
+    print(f"rules set: {len(rules)}", flush=True)
+
+
+def backfill(handle: str, since_id: str = "") -> list[dict]:
+    """Pull recent posts for a caller (onboarding + gap recovery)."""
+    params: dict = {"query": f"from:{handle}", "queryType": "Latest"}
+    if since_id:
+        params["sinceId"] = since_id
+    r = httpx.get(f"{API}/twitter/tweet/advanced_search",
+                  headers=headers(), params=params, timeout=30)
+    return (r.json().get("tweets") or [])
+
+
+def queue_candidate(queue_path: str, author: str, post_id: str, text: str) -> int:
+    n = 0
+    with open(queue_path, "a") as q:
+        for mint in find_cas(text):
+            q.write(json.dumps({
+                "post_id": post_id,
+                "author": author,
+                "text": text[:500],
+                "mint": mint,
+                "snapshot": snapshot_price(mint),
+            }) + "\n")
+            n += 1
+    return n
+
+
+async def stream_loop(queue_path: str) -> None:
+    import websockets  # pip: websockets
+
+    backoff = 5
+    while True:
+        try:
+            async with websockets.connect(WS, extra_headers=headers()) as ws:
+                print("stream connected", flush=True)
+                backoff = 5
+                async for raw in ws:
+                    try:
+                        tweet = json.loads(raw)
+                    except Exception:
+                        continue
+                    text = tweet.get("text") or tweet.get("full_text") or ""
+                    if not is_candidate(text):
+                        continue
+                    author = ((tweet.get("author") or {}).get("userName")
+                              or tweet.get("screen_name") or "?")
+                    n = queue_candidate(queue_path,
+                                        author, str(tweet.get("id")), text)
+                    if n:
+                        print(f"queued {n} from @{author}", flush=True)
+        except Exception as e:
+            print(f"stream dropped ({e}), retry in {backoff}s", flush=True)
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, 300)
+
+
 def main():
     seed_path = os.environ.get("SEED_PATH", "watcher/seed.json")
     with open(seed_path) as f:
-        seed = json.load(f)  # [{"handle": "...", "tier": 1}, ...]
-    out = os.environ.get("QUEUE_PATH", "watcher/queue.jsonl")
-    print(f"watching {len(seed)} callers, queue -> {out}", flush=True)
-    # NOTE: per-caller polling via uny-x plugs in here once WATCHER_COOKIES
-    # is on the box. Until then this validates regex + price snapshots
-    # against a timeline dump passed via TIMELINE_DUMP (jsonl of post dicts).
-    dump = os.environ.get("TIMELINE_DUMP", "")
-    if not dump:
-        print("no TIMELINE_DUMP set — poll loop goes live with cookies.", flush=True)
-        return
-    queued = 0
-    with open(dump) as f, open(out, "a") as q:
-        for line in f:
-            try:
-                post = json.loads(line)
-            except Exception:
-                continue
-            text = post.get("full_text") or post.get("text") or ""
-            if not is_candidate(text):
-                continue
-            for mint in find_cas(text):
-                snap = snapshot_price(mint)
-                q.write(json.dumps({
-                    "post_id": post.get("id_str"),
-                    "author": post.get("author"),
-                    "text": text[:500],
-                    "mint": mint,
-                    "snapshot": snap,
-                }) + "\n")
-                queued += 1
-    print(f"queued {queued} candidates", flush=True)
+        seed = json.load(f)  # [{"handle": "..."}, ...]
+    handles = [s["handle"].lstrip("@") for s in seed]
+    queue_path = os.environ.get("QUEUE_PATH", "watcher/queue.jsonl")
+    set_rules(chunk_rules(handles))
+    # backlog for every caller on boot (cheap: ~20 tweets each)
+    for h in handles:
+        for t in backfill(h):
+            text = t.get("text") or ""
+            if is_candidate(text):
+                queue_candidate(queue_path, h, str(t.get("id")), text)
+    print(f"streaming {len(handles)} callers, queue -> {queue_path}", flush=True)
+    asyncio.run(stream_loop(queue_path))
 
 
 if __name__ == "__main__":

@@ -3,8 +3,8 @@ CREATE TABLE IF NOT EXISTS callers (
   handle      TEXT UNIQUE NOT NULL,
   uid         TEXT,
   added_at    TIMESTAMPTZ DEFAULT now(),
-  source      TEXT NOT NULL DEFAULT 'seed',   -- seed | snitch | scout
-  tier        INT  NOT NULL DEFAULT 3         -- 1 = hot, 2 = warm, 3 = cold
+  source      TEXT NOT NULL DEFAULT 'seed'    -- seed | snitch | scout
+  -- no tiers: the stream covers every caller in real time, equally
 );
 
 CREATE TABLE IF NOT EXISTS calls (

@@ -1,4 +1,5 @@
-"""Cookie loader: file path wins, inline JSON env is the fallback."""
+"""Cookie loader for the Heimdall poster shell: file path wins, inline JSON env
+is the fallback. Reading needs no cookies (twitterapi.io key instead)."""
 import json
 import os
 
