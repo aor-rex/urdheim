@@ -36,6 +36,36 @@ def classify(author: str, text: str) -> dict:
     return json.loads(content)
 
 
+def record_call(item: dict, verdict: dict) -> None:
+    """Write a detective verdict into `calls` (creating the caller row)."""
+    import psycopg
+
+    with psycopg.connect(os.environ["DB_URL"]) as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO callers(handle) VALUES (%s) "
+            "ON CONFLICT (handle) DO NOTHING",
+            (item.get("author", "?"),),
+        )
+        cur.execute("SELECT id FROM callers WHERE handle = %s",
+                    (item.get("author", "?"),))
+        caller_id = cur.fetchone()[0]
+        snap = item.get("snapshot") or {}
+        cur.execute(
+            """INSERT INTO calls(caller_id, coin, mint, price_at_call,
+                                 mcap_at_call, post_url, post_id, called_at,
+                                 verdict, confidence, evidence_quote)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, now(), %s, %s, %s)
+               ON CONFLICT (post_id) DO NOTHING""",
+            (caller_id, item.get("coin", "?"), item.get("mint"),
+             snap.get("price"), snap.get("mcap"),
+             f"https://x.com/i/status/{item.get('post_id')}",
+             str(item.get("post_id")),
+             verdict.get("verdict"), verdict.get("confidence"),
+             verdict.get("evidence")),
+        )
+        conn.commit()
+
+
 def main():
     queue = os.environ.get("QUEUE_PATH", "watcher/queue.jsonl")
     with open(queue) as f:
@@ -48,7 +78,9 @@ def main():
                 continue
             print(json.dumps({"post_id": item.get("post_id"),
                               "mint": item.get("mint"), **v}), flush=True)
-            # TODO: write verdicts to `calls` table
+            if v.get("verdict") in ("call", "soft-shill") and v.get(
+                    "confidence", 0) >= 0.7:
+                record_call(item, v)
 
 
 if __name__ == "__main__":

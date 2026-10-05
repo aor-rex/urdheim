@@ -11,7 +11,7 @@ import re
 import httpx
 
 API = "https://api.twitterapi.io"
-WS = "wss://ws.twitterapi.io/twitter/tweet/stream"
+WS = os.environ.get("TWITTERAPI_WS", "wss://ws.twitterapi.io/twitter/tweet/stream")
 
 BASE58 = r"[1-9A-HJ-NP-Za-km-z]{32,44}"
 CA_RE = re.compile(BASE58)
@@ -97,9 +97,13 @@ async def stream_loop(queue_path: str) -> None:
     import websockets  # pip: websockets
 
     backoff = 5
+    import inspect
+    _hdr = ("additional_headers"
+            if "additional_headers" in inspect.signature(websockets.connect).parameters
+            else "extra_headers")
     while True:
         try:
-            async with websockets.connect(WS, extra_headers=headers()) as ws:
+            async with websockets.connect(WS, **{_hdr: headers()}) as ws:
                 print("stream connected", flush=True)
                 backoff = 5
                 async for raw in ws:
