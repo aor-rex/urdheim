@@ -7,9 +7,13 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
 
 **Settled decisions:**
 - Language: Python throughout. FastAPI + Next.js static export for web.
-- Read path: **twitterapi.io** — managed X reader, one `X-API-Key` header,
-  no cookies, no shells, no ban risk, no polling. Real-time WebSocket stream
-  (~250ms) replaces the entire tier-polling watcher.
+- Read path: **GetXAPI** — one Bearer key, no cookies, no shells, no ban
+  risk. Caller monitors push new tweets to our webhook (~2s, HMAC-signed);
+  `user/tweets` covers onboarding backfill + gap polling ($0.001/call).
+  twitterapi.io stream kept as fallback transport (`watcher/watch.py`).
+  NOTE: monitor webhooks need a Monitoring plan (not per-call) — confirm
+  cost on the dashboard before enabling; until then, backfill + timed poll
+  runs the read path on pure pay-per-call.
 - Write path: uny-x stays **only** for Heimdall posting (official X API is the
   only compliant write route — parked till revenue). Poster = separate Heimdall
   shell, never scrapes.
@@ -26,7 +30,8 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
 
 - Repo `urdheim`, public from day one. VPS + Dokploy (existing). Postgres.
 - `.env` (never committed): `OPENCODE_API_KEY`, `DETECT_MODEL`,
-  `WRITER_MODEL`, `DB_URL`, `TWITTERAPI_KEY`, `POSTER_COOKIES`.
+  `WRITER_MODEL`, `DB_URL`, `GETXAPI_KEY`, `GETXAPI_WEBHOOK_SECRET`,
+  `WEBHOOK_URL`, `TWITTERAPI_KEY` (fallback), `POSTER_COOKIES`.
 - Schema (4 tables):
   - `callers` — handle, uid, added_at, source (seed/snitch/scout)
   - `calls` — caller_id, coin, mint, price_at_call, mcap_at_call,
@@ -34,19 +39,28 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
   - `snapshots` — call_id, price, mcap, liq, taken_at (nightly)
   - `submissions` — post_url, suggested_caller, status, created_at
 
-## Phase 1 — The Stream (replaces the poll watcher)
+## Phase 1 — The Read Path (GetXAPI primary, twitterapi fallback)
 
-- No reader shell, no cookies, no tiers, no polling loop. One persistent
-  WebSocket (`wss://ws.twitterapi.io/twitter/tweet/stream`) with filter rules
+- No reader shell, no cookies, no polling loop. One shared webhook
+  (`POST /hook` in `receiver/hook.py`, FastAPI behind Dokploy HTTPS):
+  each tracked caller registered via `monitor/add` (`watcher/getxapi.py`),
+  new tweets pushed HMAC-signed within ~2s, all callers equal.
+- Same per-tweet pipeline as the stream: CA regex + call-words → match saved
+  raw + DexScreener snapshot at arrival → `watcher/queue.jsonl` for detective.
+  Shared code lives in `watcher/common.py` — transports can't diverge.
+- `user/tweets` does onboarding backfill (recent history per new caller) and
+  gap-recovery polling with per-caller cursor files ($0.001/call, ~20 tweets).
+  Poll every ~15 min as safety net under the webhooks.
+- twitterapi.io WebSocket (`watcher/watch.py`) stays as fallback transport —
+  same queue format, swap by running the other entrypoint.
+
+- Fallback transport (twitterapi.io): persistent WebSocket
+  (`wss://ws.twitterapi.io/twitter/tweet/stream`) with filter rules
   (`from:alice OR from:bob OR ...`, chunked ~40 handles/rule, tuned live).
-  Matching tweets arrive sub-second, 24/7, all callers equal.
-- Per-tweet pipeline: CA regex + call-words → match saved raw +
-  DexScreener price snapshot at arrival → queue for detective.
-  Non-matches discarded (~95% dies free, client-side, $0).
-- Reconnect with backoff; on reconnect, gap-fill via
-  `advanced_search` (`from:H since:<last_seen_id>`) so nothing is missed.
-- Onboarding a new caller: `user/last_tweets` pulls recent history for
-  instant backlog (fractions of a cent per caller).
+  Reconnect with backoff; gap-fill via `advanced_search`
+  (`from:H since:<last_seen_id>`); onboarding via `user/last_tweets`.
+  Cost if fallback goes live: ~15k tweets/mo × $0.15/1k ≈ **~$2–3/mo**.
+- Non-matches discarded (~95% dies free, client-side, $0) on either transport.
 - Snitch box feeds `submissions`; 3+ nominations from distinct IPs → tracked.
   Manual approval until the pattern looks honest.
 - Snitch anti-abuse: nominations only queue an account for tracking — receipts
@@ -54,10 +68,9 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
   fabricate a call (worst case: a clean caller gets a clean page). Every
   submission must be a real post URL containing a real call or it's binned.
   Guards: per-IP rate limit, distinct-IP rule, Cloudflare Turnstile on the box.
-- Cost (100 callers, ~5 tweets/day each): ~15k tweets/mo × $0.15/1k ≈
-  **~$2–3/mo**. Spending cap set in the twitterapi.io dashboard. Backfills
-  are noise on top. (Old polling design would have cost ~$200/mo in requests —
-  the stream is what makes this cheap.)
+- Cost: backfill/poll reads $0.001/call (~20 tweets); webhooks need a
+  Monitoring plan (confirm on dashboard). Either way pocket change next to
+  the old $200/mo polling design.
 
 ## Phase 2 — The Brain (API agents, unchanged)
 
