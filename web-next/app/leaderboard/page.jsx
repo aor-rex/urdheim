@@ -4,8 +4,10 @@ import { callers, fmtAvg } from '../../lib/data';
 
 export default function Leaderboard() {
   const [tab, setTab] = useState('all');
+  const [chain, setChain] = useState('all');
   const [open, setOpen] = useState('Cryptoceleb1');
-  const shown = callers.filter((c) => tab === 'all' || c.kind === tab);
+  const shown = callers.filter((c) => tab === 'all' || c.kind === tab)
+    .filter((c) => chain === 'all' || (c.chains || ['solana']).includes(chain));
   return (
     <div className="wrap" style={{ paddingTop: 44 }}>
       <div className="eyebrow">THE ETERNAL RECORD</div>
@@ -13,12 +15,20 @@ export default function Leaderboard() {
       <div style={{ textAlign: 'center', color: '#8a7f63', fontStyle: 'italic', marginBottom: 8 }}>every call remembered · every rug written in stone</div>
       <div style={{ textAlign: 'center', color: '#5a4f35', letterSpacing: 14, fontSize: 18, margin: '18px 0 34px' }}>ᚢᚱᚦ · ᚺᛖᛁ</div>
       <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#c9a227,transparent)', margin: '0 0 34px' }} />
-      <div className="sans" style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 30 }}>
+      <div className="sans" style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
         {[['all', 'ALL CALLERS'], ['guilty', 'CONDEMNED'], ['clean', 'VINDICATED']].map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             style={{ background: tab === k ? '#c9a227' : 'transparent', border: '1px solid ' + (tab === k ? '#c9a227' : '#4a4132'),
               color: tab === k ? '#0c0a08' : '#b7a67f', padding: '9px 26px', fontSize: 13, letterSpacing: 2,
               cursor: 'pointer', borderRadius: 2, fontWeight: tab === k ? 700 : 400 }}>{label}</button>
+        ))}
+      </div>
+      <div className="sans" style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 30 }}>
+        {[['all', 'ALL CHAINS'], ['solana', 'SOLANA'], ['robinhood', 'Robinhood']].map(([k, label]) => (
+          <button key={k} onClick={() => setChain(k)}
+            style={{ background: 'transparent', border: '1px solid ' + (chain === k ? '#c9a227' : '#4a4132'),
+              color: chain === k ? '#c9a227' : '#5a4f35', padding: '6px 18px', fontSize: 12, letterSpacing: 2,
+              cursor: 'pointer', borderRadius: 2 }}>{label}</button>
         ))}
       </div>
       {shown.map((c) => (

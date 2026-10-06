@@ -116,7 +116,8 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
 ## What NEVER gets built
 
 - No user accounts / X oauth · no onchain anything · no copy-trading,
-  marketplace, or tokens · Solana only until proven
+  marketplace, or tokens · memecoins only (solana + robinhood chain);
+  tokenized stocks parked until the engine is proven
 
 ## MVP cutoff
 

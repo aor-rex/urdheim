@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS calls (
   caller_id     INT REFERENCES callers(id),
   coin          TEXT NOT NULL,
   mint          TEXT NOT NULL,
+  chain         TEXT NOT NULL DEFAULT 'solana', -- solana | robinhood
   price_at_call DOUBLE PRECISION,
   mcap_at_call  DOUBLE PRECISION,
   post_url      TEXT UNIQUE NOT NULL,
