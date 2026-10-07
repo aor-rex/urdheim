@@ -1,12 +1,11 @@
-"""Urdheim mentions listener: tags in -> receipts out.
+"""Urdheim mentions listener: tags in -> brain decides -> executor acts.
 
-Polls `unyx mentions` (free, same cookies), answers only what it can:
-  tag contains a CA/mint  -> coin receipt (calls + latest snapshot)
-  tag contains an @handle -> caller file summary (record, worst call)
-  anything else           -> ignored, logged, never replied to
-
+Polls `unyx mentions` (free, same cookies). Every mention goes to
+brain/intent.py (model reads conversation, returns structured intent);
+this file only executes: receipts, track enrollment, or silence.
 Reply path: `unyx reply` free first, GetXAPI $0.002 fallback (budget-guarded).
 Seen ids in listener/seen.json — restarts never double-reply.
+Track enrollments land in watcher/seed.json (callers) + submissions table.
 
 Usage:
   mentions.py --once [--dry] [--test "@user check <mint>"]
@@ -22,11 +21,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from unyx import UnyxClient  # noqa: E402
 
+from brain.intent import classify_mention  # noqa: E402
 from watcher.common import detect_chain, snapshot_price  # noqa: E402
 
-HANDLE_RE = re.compile(r"@([A-Za-z0-9_]{1,15})")
 CA_RE = re.compile(r"0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}")
-SELF = os.environ.get("LISTENER_SELF", "ryu_ngmi").lower()
+SELF = os.environ.get("LISTENER_SELF", "urdheim").lower()
 
 
 def client() -> UnyxClient:
@@ -118,28 +117,82 @@ def caller_file(conn, handle: str) -> str | None:
     if not conn:
         return None
     with conn.cursor() as cur:
-        cur.execute(
-            "SELECT id, verdict, total_calls FROM callers WHERE handle = %s",
-            (handle,))
+        cur.execute("SELECT id FROM callers WHERE handle = %s", (handle,))
         row = cur.fetchone()
-    if not row:
-        return f"@{handle} is not tracked yet. nominate: urdheim/snitch"
-    cid, verdict, total = row
-    return (f"@{handle}: {verdict or 'unscored'} · "
-            f"{total or 0} calls on record · full file: urdheim/caller/{handle}")
+        if not row:
+            return f"@{handle} is not tracked yet. nominate: urdheim/snitch"
+        cur.execute("SELECT COUNT(*), MAX(called_at) FROM calls WHERE caller_id = %s",
+                    (row[0],))
+        total, last = cur.fetchone()
+    return (f"@{handle}: {total or 0} calls on record"
+            + (f", last {str(last)[:10]}" if last else "")
+            + f" · full file: urdheim/caller/{handle}")
 
 
-def decide(text: str, conn) -> str | None:
-    """Tag text -> reply text, or None (stay silent)."""
-    mints = list(dict.fromkeys(CA_RE.findall(text or "")))
-    if mints:
-        return coin_receipt(conn, mints[0])
-    for h in HANDLE_RE.findall(text or ""):
-        if h.lower() == SELF:
-            continue
-        out = caller_file(conn, h)
-        if out:
-            return out
+def seed_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "..", "watcher", "seed.json")
+
+
+def load_seeds() -> list[str]:
+    p = seed_path()
+    if os.path.exists(p):
+        try:
+            data = json.load(open(p))
+            items = data.get("handles", data) if isinstance(data, dict) else data
+            return [h.get("handle", h) if isinstance(h, dict) else h
+                    for h in items]
+        except Exception:
+            pass
+    return ["degenreck", "devvaintnohobby", "Tally__DE"]
+
+
+def enroll_caller(handle: str) -> str:
+    """track_caller executor: append to seed.json (next poll backfills)."""
+    p = seed_path()
+    seeds = load_seeds()
+    if handle.lower() in [h.lower() for h in seeds]:
+        return f"@{handle} is already tracked — file: urdheim/caller/{handle}"
+    seeds.append(handle)
+    json.dump([{"handle": h} for h in seeds], open(p, "w"), indent=2)
+    return (f"tracking @{handle} — on the watchlist. "
+            f"first card lands at urdheim/caller/{handle} once calls land.")
+
+
+def enroll_call(conn, author: str, mint: str, post_id: str) -> str:
+    """track_call executor: log to submissions (detective picks it up)."""
+    if conn and post_id and post_id != "test-mode-no-id":
+        url = f"https://x.com/i/status/{post_id}"
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM submissions WHERE post_url = %s", (url,))
+            if not cur.fetchone():
+                cur.execute(
+                    """INSERT INTO submissions (post_url, suggested_caller,
+                                                reporter_ip, status)
+                       VALUES (%s, %s, %s, 'pending')""",
+                    (url, f"{author}:{mint}", "x-mention"))
+                conn.commit()
+    short = mint[:10] + "…" if len(mint) > 12 else mint
+    return f"logged — watching {short}. receipt follows once the call resolves."
+
+
+def execute(author: str, text: str, conn, post_id: str = "") -> str | None:
+    """Brain intent -> action. Returns reply text or None (silence)."""
+    intent = classify_mention(author, text)
+    kind, handle, mint = intent["intent"], intent["handle"], intent["mint"]
+    if handle.lower() == SELF:
+        handle = ""
+    if kind == "ignore":
+        return None
+    if kind == "receipt_coin":
+        m = mint or next(iter(CA_RE.findall(text or "")), "")
+        return coin_receipt(conn, m) if m else None
+    if kind == "receipt_caller":
+        return caller_file(conn, handle) if handle else None
+    if kind == "track_caller":
+        return enroll_caller(handle) if handle else None
+    if kind == "track_call":
+        m = mint or next(iter(CA_RE.findall(text or "")), "")
+        return enroll_call(conn, author, m, post_id) if m else None
     return None
 
 
@@ -165,17 +218,15 @@ def run_once(dry: bool = False, test: str = "") -> None:
     if test:
         m = re.match(r"@(\w+)\s+(.*)", test)
         author, text = (m.group(1), m.group(2)) if m else ("tester", test)
-        reply = decide(text, conn)
+        reply = execute(author, text, conn, "test-mode-no-id")
         print(f"TEST mention @{author}: {text[:80]}")
         print("DECISION:", (reply or "SILENCE")[:400])
-        if reply and not dry:
-            print(send_reply("test-mode-no-id", reply, dry=True))
         return
     for m in fetch_mentions():
         if m["id"] in seen or not m["id"]:
             continue
         seen.add(m["id"])
-        reply = decide(m["text"], conn)
+        reply = execute(m["author"], m["text"], conn, m["id"])
         if not reply:
             print(f"ignore @{m['author']}: {(m['text'] or '')[:60]}")
             continue

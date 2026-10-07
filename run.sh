@@ -18,11 +18,12 @@ cmd_poll() {
   "$ROOT/.venv/bin/python" - >>"$ROOT/log/poll.log" 2>&1 <<'EOF'
 from watcher.getxapi import backfill
 from watcher.common import is_candidate, queue_candidate
+from listener.mentions import load_seeds
 from brain.detective import classify, record_call
 import json
 qp = "/tmp/q.jsonl"
 n_q = 0
-for h in ["degenreck", "devvaintnohobby", "Tally__DE"]:
+for h in load_seeds():
     for t in backfill(h)[0]:
         if is_candidate(t.get("text") or ""):
             queue_candidate(qp, h, str(t["id"]), t["text"] or "")
