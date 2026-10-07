@@ -10,6 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import httpx
 import psycopg  # noqa: E402
 from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
@@ -18,8 +19,44 @@ app = FastAPI(title="urdheim-api")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8092", "http://127.0.0.1:8092"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
+
+
+def verify_turnstile(token: str) -> bool:
+    secret = os.environ.get("TURNSTILE_SECRET", "")
+    if not secret:
+        return False
+    try:
+        r = httpx.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data={"secret": secret, "response": token}, timeout=15)
+        return bool(r.json().get("success"))
+    except Exception:
+        return False
+
+
+@app.post("/api/snitch")
+def snitch(body: dict) -> dict:
+    url = (body.get("post_url") or "").strip()
+    handle = (body.get("handle") or "").strip().lstrip("@")
+    if not url.startswith("https://x.com/") and not url.startswith("https://twitter.com/"):
+        raise HTTPException(400, "post link must be an x.com url")
+    if not verify_turnstile(body.get("turnstile") or ""):
+        raise HTTPException(403, "bot check failed")
+    with conn() as cn, cn.cursor() as cur:
+        cur.execute("SELECT id FROM submissions WHERE post_url = %s", (url,))
+        if cur.fetchone():
+            return {"ok": True, "duplicate": True}
+        cur.execute(
+            """INSERT INTO submissions (post_url, suggested_caller,
+                                        reporter_ip, status)
+               VALUES (%s, %s, %s, 'pending') RETURNING id""",
+            (url, handle or None, "web"))
+        sid = cur.fetchone()[0]
+        cn.commit()
+    return {"ok": True, "id": sid}
 
 
 def conn():
