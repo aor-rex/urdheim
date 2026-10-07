@@ -12,6 +12,7 @@ export const apiCaller = (h) => get('/api/caller/' + encodeURIComponent(h));
 export const apiCoin = (m) => get('/api/coin/' + encodeURIComponent(m));
 export const apiFeed = (n) => get('/api/feed?limit=' + (n || 30));
 export const apiProfile = (h) => get('/api/profile/' + encodeURIComponent(h));
+export const apiStats = () => get('/api/stats');
 
 export const X_URL = 'https://x.com/Urdheim';
 

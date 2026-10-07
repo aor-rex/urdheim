@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ScrollText, Trophy, UserRound, Info } from 'lucide-react';
 
 const NAV = [
-  ['/', 'Live receipts', 'Feed', ScrollText],
+  ['/feed', 'Live receipts', 'Feed', ScrollText],
   ['/leaderboard', 'Leaderboard', 'Board', Trophy],
   ['/my', 'My receipts', 'Mine', UserRound],
   ['/how', 'How it works', 'How', Info],
@@ -13,6 +13,11 @@ const NAV = [
 
 export default function RootLayout({ children }) {
   const path = usePathname() || '/';
+  if (path === '/') return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
   return (
     <html lang="en">
       <body>
