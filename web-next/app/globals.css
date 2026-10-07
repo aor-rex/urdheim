@@ -1,16 +1,16 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0c0a08;color:#e8e0cf;font-family:Georgia,'Times New Roman',serif;-webkit-font-smoothing:antialiased}
 .sans{font-family:Verdana,Geneva,sans-serif}
-.wrap{max-width:880px;margin:0 auto;padding:0 28px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
 .eyebrow{text-align:center;letter-spacing:6px;font-size:12px;color:#c9a227;font-family:Verdana,sans-serif}
 .gold{color:#c9a227}.muted{color:#9a8c6c}.dim{color:#5a4f35}
 .grn{color:#7fb069}.rd{color:#c1443c}
-.nav{display:flex;align-items:center;gap:26px;padding:16px 32px;border-bottom:1px solid #2b2519;font-family:Verdana,sans-serif;font-size:13px;letter-spacing:2px}
+.nav{display:flex;align-items:center;gap:26px;padding:16px 32px;border-bottom:none;font-family:Verdana,sans-serif;font-size:13px;letter-spacing:2px}
 .nav .logo{font-family:Georgia,serif;font-size:20px;letter-spacing:5px;color:#f2ead6;text-decoration:none}
 .nav a{color:#9a8c6c;text-decoration:none}.nav a:hover{color:#c9a227}
 .nav .on{color:#c9a227}
 .nav .x{margin-left:auto;border:1px solid #c9a227;color:#c9a227;padding:8px 18px;border-radius:3px;text-decoration:none}
-footer{max-width:880px;margin:40px auto 0;padding:26px 28px;border-top:1px solid #2b2519;display:flex;gap:24px;font-family:Verdana,sans-serif;font-size:12px;letter-spacing:1px;color:#5a4f35}
+footer{max-width:1180px;margin:40px auto 0;padding:26px 28px;border-top:1px solid #2b2519;display:flex;gap:24px;font-family:Verdana,sans-serif;font-size:12px;letter-spacing:1px;color:#5a4f35}
 footer a{color:#8a7f63;text-decoration:none}
 .crumb{font-family:Verdana,sans-serif;font-size:12px;letter-spacing:2px;color:#5a4f35;margin-bottom:20px}
 .crumb a{color:#9a8c6c;text-decoration:none}
