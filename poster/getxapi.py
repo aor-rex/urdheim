@@ -11,7 +11,11 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 import httpx
+
+from brain.budget import allow, log
 
 API = "https://api.getxapi.com"
 
@@ -32,10 +36,14 @@ def post(text: str, cookies_path: str, dry: bool = False) -> dict:
         body["ct0"] = ct0
     if dry:
         return {"dry": True, "chars": len(text)}
+    ok, reason = allow("tweet/create")
+    if not ok:
+        raise SystemExit(f"budget stop: {reason}")
     r = httpx.post(f"{API}/twitter/tweet/create",
                    headers={"Authorization": "Bearer " + os.environ["GETXAPI_KEY"]},
                    json=body, timeout=60)
     r.raise_for_status()
+    log("tweet/create")
     return r.json()
 
 
