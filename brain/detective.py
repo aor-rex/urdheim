@@ -78,8 +78,11 @@ def record_call(item: dict, verdict: dict) -> None:
         cur.execute(
             """INSERT INTO calls(caller_id, coin, mint, chain, price_at_call,
                                  mcap_at_call, post_url, post_id, called_at,
-                                 verdict, confidence, evidence_quote)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, now(), %s, %s, %s)
+                                 verdict, confidence, evidence_quote,
+                                 filer_handle, filed_via,
+                                 likes, reposts, quotes, views)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, now(), %s, %s, %s,
+                       %s, %s, %s, %s, %s, %s)
                ON CONFLICT (post_id) DO NOTHING""",
             (caller_id, coin, item.get("mint"),
              item.get("chain") or (snap.get("chain") or "solana"),
@@ -87,9 +90,16 @@ def record_call(item: dict, verdict: dict) -> None:
              f"https://x.com/i/status/{item.get('post_id')}",
              str(item.get("post_id")),
              verdict.get("verdict"), verdict.get("confidence"),
-             verdict.get("evidence")),
+             verdict.get("evidence"),
+             item.get("filer"), item.get("filed_via") or "seed",
+             item.get("likes") or 0, item.get("reposts") or 0,
+             item.get("quotes") or 0, item.get("views") or 0),
         )
         conn.commit()
+        from brain.profiles import ensure_profile
+        ensure_profile(item.get("author", "?"), item.get("client"))
+        if item.get("filer"):
+            ensure_profile(item["filer"], item.get("client"))
 
 
 def main():

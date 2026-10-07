@@ -22,6 +22,11 @@ from listener.mentions import load_seeds
 from brain.detective import classify, record_call
 import json
 import os
+from unyx import UnyxClient
+_ux = UnyxClient()
+_ck = os.environ.get("LISTENER_COOKIES") or os.environ.get("POSTER_COOKIES") or ""
+if _ck:
+    _ux.login_from_cookies(_ck)
 qp = "/tmp/q.jsonl"
 donep = "/tmp/q.done"
 queued = set()
@@ -50,6 +55,7 @@ with open(donep, "a") as df:
         df.write(pid + "\n"); df.flush()
     print(item["author"], item["mint"][:14], "->", v["verdict"], v["confidence"], flush=True)
     if v["verdict"] == "call":
+        item["client"] = _ux
         record_call(item, v); n_r += 1
 print(f"poll done: queued={n_q} recorded={n_r}", flush=True)
 EOF

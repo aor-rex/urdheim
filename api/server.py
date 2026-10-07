@@ -136,13 +136,113 @@ def caller_row(handle: str, calls: list[dict], rank: str) -> dict:
 def fetch_calls(cur, where: str, arg) -> list[dict]:
     cur.execute(f"""
         SELECT c.coin, c.mint, c.chain, h.handle, c.price_at_call,
-               c.called_at, c.post_url,
+               c.called_at, c.post_url, c.filer_handle, c.filed_via,
+               c.likes, c.reposts, c.quotes, c.views,
                (SELECT s.price FROM snapshots s
                  WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
         FROM calls c JOIN callers h ON h.id = c.caller_id
         WHERE {where} ORDER BY c.called_at DESC""", (arg,))
     cols = [d[0] for d in cur.description]
     return [shape_call(dict(zip(cols, r))) for r in cur.fetchall()]
+
+
+def profile_map(cur, handles: set[str]) -> dict:
+    """Cached X identity for a set of handles. Missing rows → bare stub."""
+    if not handles:
+        return {}
+    cur.execute("SELECT handle, name, avatar, bio, followers, following,"
+                " verified FROM profiles WHERE handle = ANY(%s)",
+                (list(handles),))
+    out = {r[0]: {"handle": r[0], "name": r[1] or r[0], "avatar": r[2] or "",
+                  "bio": r[3] or "", "followers": r[4] or 0,
+                  "following": r[5] or 0, "verified": bool(r[6])}
+           for r in cur.fetchall()}
+    for h in handles:
+        out.setdefault(h, {"handle": h, "name": h, "avatar": "", "bio": "",
+                           "followers": 0, "following": 0, "verified": False})
+    return out
+
+
+def shape_receipt(c: dict, people: dict) -> dict:
+    viral = (c.get("views") or 0) >= 40000
+    return {
+        "coin": c["coin"], "mint": c["mint"], "chain": c["chain"],
+        "caller": people.get(c["handle"], {"handle": c["handle"]}),
+        "filer": people.get(c.get("filer_handle") or c["handle"],
+                            {"handle": c.get("filer_handle") or c["handle"]}),
+        "filed_via": c.get("filed_via") or "seed",
+        "then": c["then"], "now": c["now"], "mult": c["mult"],
+        "ret": c["ret"], "good": c["good"],
+        "seal": ("VINDICATED" if c["good"] else "CONDEMNED")
+                if c["mult"] is not None else "UNDECIDED",
+        "viral": viral,
+        "eng": {"likes": c.get("likes") or 0, "reposts": c.get("reposts") or 0,
+                "quotes": c.get("quotes") or 0, "views": c.get("views") or 0},
+        "called_at": c["called_at"], "post_url": c["post_url"],
+    }
+
+
+@app.get("/api/feed")
+def feed(limit: int = 30) -> dict:
+    with conn() as cn, cn.cursor() as cur:
+        cur.execute("""
+            SELECT c.coin, c.mint, c.chain, h.handle, c.price_at_call,
+                   c.called_at, c.post_url, c.filer_handle, c.filed_via,
+                   c.likes, c.reposts, c.quotes, c.views,
+                   (SELECT s.price FROM snapshots s
+                     WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
+            FROM calls c JOIN callers h ON h.id = c.caller_id
+            ORDER BY c.called_at DESC LIMIT %s""", (min(limit, 100),))
+        cols = [d[0] for d in cur.description]
+        raws = [dict(zip(cols, r)) for r in cur.fetchall()]
+        people = profile_map(cur, {r["handle"] for r in raws} |
+                             {r["filer_handle"] for r in raws
+                              if r.get("filer_handle")})
+        receipts = []
+        for raw in raws:
+            c = shape_call(raw)
+            c.update({k: raw.get(k) for k in
+                      ("filer_handle", "filed_via", "likes", "reposts",
+                       "quotes", "views")})
+            receipts.append(shape_receipt(c, people))
+    return {"receipts": receipts}
+
+
+@app.get("/api/profile/{handle}")
+def profile(handle: str) -> dict:
+    with conn() as cn, cn.cursor() as cur:
+        cur.execute("""
+            SELECT c.coin, c.mint, c.chain, h.handle, c.price_at_call,
+                   c.called_at, c.post_url, c.filer_handle, c.filed_via,
+                   c.likes, c.reposts, c.quotes, c.views,
+                   (SELECT s.price FROM snapshots s
+                     WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
+            FROM calls c JOIN callers h ON h.id = c.caller_id
+            WHERE h.handle = %s OR c.filer_handle = %s
+            ORDER BY c.called_at DESC""", (handle, handle))
+        cols = [d[0] for d in cur.description]
+        raws = [dict(zip(cols, r)) for r in cur.fetchall()]
+        cur.execute("SELECT 1 FROM profiles WHERE handle = %s", (handle,))
+        known = bool(cur.fetchone())
+        if not raws and not known:
+            raise HTTPException(404, f"no record on @{handle} yet")
+        people = profile_map(cur, {r["handle"] for r in raws} |
+                             {r["filer_handle"] for r in raws
+                              if r.get("filer_handle")} | {handle})
+        receipts = []
+        for raw in raws:
+            c = shape_call(raw)
+            c.update({k: raw.get(k) for k in
+                      ("filer_handle", "filed_via", "likes", "reposts",
+                       "quotes", "views")})
+            receipts.append(shape_receipt(c, people))
+        filed = sum(1 for r in raws
+                    if (r.get("filer_handle") or r["handle"]) == handle)
+        scored = [r["mult"] for r in receipts if r["mult"] is not None]
+        avg = (sum((m - 1) * 100 for m in scored) / len(scored)) if scored else 0
+    return {"profile": people[handle], "stats": {
+        "filed": filed, "verified": len(scored), "avg": round(avg),
+        "scored": len(scored)}, "receipts": receipts}
 
 
 @app.get("/api/leaderboard")

@@ -76,7 +76,8 @@ def process(limit: int = 20) -> dict:
             mint = mints[0]
             record_call({"author": author, "post_id": post_id, "text": text,
                          "mint": mint, "chain": detect_chain(mint),
-                         "snapshot": snapshot_price(mint)}, v)
+                         "snapshot": snapshot_price(mint),
+                         "filed_via": "form", "client": client}, v)
             cur.execute("UPDATE submissions SET status='accepted' WHERE id=%s",
                         (sid,))
             out["accepted"] += 1
