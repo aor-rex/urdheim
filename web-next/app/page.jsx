@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ScrollText, Tag, SearchCheck, Stamp, Scale, ArrowRight, LogIn } from 'lucide-react';
-import { apiStats } from '../lib/api';
+import { ScrollText, Tag, SearchCheck, Stamp, Scale, ArrowRight, ArrowUpRight, LogIn } from 'lucide-react';
+import { apiFeed, apiStats, timeAgo } from '../lib/api';
 
 const STEPS = [
   [Tag, 'Tag the call', 'Reply to any call post with @urdheim. That tag is your filing.'],
@@ -13,7 +13,11 @@ const STEPS = [
 
 export default function Landing() {
   const [stats, setStats] = useState(null);
-  useEffect(() => { apiStats().then(setStats).catch(() => {}); }, []);
+  const [fresh, setFresh] = useState([]);
+  useEffect(() => {
+    apiStats().then(setStats).catch(() => {});
+    apiFeed(3).then((d) => setFresh(d.receipts || [])).catch(() => {});
+  }, []);
   return (
     <div className="land">
       <header className="landtop">
@@ -51,10 +55,28 @@ export default function Landing() {
           <p>No account needed to file. Sign in only when you want the filings tied to your name, on your public record.</p>
           <Link href="/feed" className="cta gold"><ScrollText size={15} />OPEN THE RECORD<ArrowRight size={15} /></Link>
         </section>
+        {fresh.length > 0 && (
+          <section className="fresh">
+            <div className="freshhead">
+              <span>FRESH FROM THE RECORD</span>
+              <Link href="/feed">view all<ArrowUpRight size={13} /></Link>
+            </div>
+            {fresh.map((r, i) => (
+              <Link key={r.mint + i} href="/feed" className="freshrow">
+                <span className="ftick">{r.coin && r.coin !== '?' ? '$' + r.coin : '◇'}</span>
+                <span className="fwhat">called by @{r.caller.handle}</span>
+                <span className={'fseal ' + (r.seal === 'VINDICATED' ? 'g' : r.seal === 'CONDEMNED' ? 'r' : '')}>{r.seal}</span>
+                <span className="fts">{timeAgo(r.ts)}</span>
+              </Link>))}
+          </section>)}
       </main>
       <footer className="landfoot">
         <span>URDHEIM · SHILL RECEIPTS</span>
-        <Link href="/how">How it works</Link>
+        <div className="footlinks">
+          <Link href="/how">How it works</Link>
+          <a href="https://x.com/Urdheim" target="_blank" rel="noreferrer">X<ArrowUpRight size={12} /></a>
+          <a href="https://github.com/aor-rex/urdheim" target="_blank" rel="noreferrer">GitHub<ArrowUpRight size={12} /></a>
+        </div>
       </footer>
     </div>
   );

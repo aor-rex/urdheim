@@ -63,6 +63,18 @@ a{color:#c9a227}
 .step:first-child{border-left:none}
 .snum{font-family:Verdana,sans-serif;font-size:11px;letter-spacing:2px;color:#5a4f35;margin-bottom:14px}
 .closer{text-align:center;padding:70px 0}
-.landfoot{display:flex;justify-content:space-between;align-items:center;padding:24px 0 40px;margin-top:auto;border-top:1px solid #2b2519;font-family:Verdana,sans-serif;font-size:11px;letter-spacing:2px;color:#5a4f35}
+.landfoot{display:flex;justify-content:space-between;align-items:center;margin:0 -36px;margin-top:auto;padding:24px 36px 40px;border-top:1px solid #2b2519;font-family:Verdana,sans-serif;font-size:11px;letter-spacing:2px;color:#5a4f35}
 .landfoot a{color:#8a7f63;text-decoration:none}
-@media (max-width:1000px){.rcard{padding:16px}.fhead{padding:18px}.fhead h1{font-size:22px}.mobilebar,.mobiletabs{display:flex}.hero{padding:56px 0 48px}.hero h1{font-size:40px}.steps{grid-template-columns:1fr}.step{border-left:none;border-top:1px solid #2b2519}.step:first-child{border-top:none}.land{padding:0 20px}}
+.footlinks{display:flex;gap:26px;align-items:center}
+.footlinks a{display:inline-flex;align-items:center;gap:5px}
+.fresh{border-top:1px solid #2b2519;padding:34px 0 60px;max-width:860px;margin:0 auto;width:100%}
+.freshhead{display:flex;justify-content:space-between;align-items:center;font-family:Verdana,sans-serif;font-size:11px;letter-spacing:2px;color:#c9a227;margin-bottom:8px}
+.freshhead a{color:#8a7f63;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.freshrow{display:flex;align-items:center;gap:16px;padding:16px 4px;border-bottom:1px solid #2b2519;text-decoration:none}
+.ftick{font-size:19px;color:#c9a227;min-width:90px}
+.fwhat{flex:1;font-size:16px;color:#9a8c6c}
+.fseal{font-family:Verdana,sans-serif;font-size:10px;letter-spacing:2px;color:#8a7f63;border:1px solid #2b2519;border-radius:2px;padding:5px 10px}
+.fseal.g{color:#7fb069;border-color:#7fb069}
+.fseal.r{color:#c1443c;border-color:#c1443c}
+.fts{font-family:Verdana,sans-serif;font-size:12px;color:#5a4f35}
+@media (max-width:1000px){.rcard{padding:16px}.fhead{padding:18px}.fhead h1{font-size:22px}.mobilebar,.mobiletabs{display:flex}.hero{padding:56px 0 48px}.hero h1{font-size:40px}.steps{grid-template-columns:1fr}.step{border-left:none;border-top:1px solid #2b2519}.step:first-child{border-top:none}.land{padding:0 20px}.landfoot{margin:0 -20px;padding:24px 20px 40px}.freshrow{flex-wrap:wrap;gap:10px 16px}}
