@@ -1,6 +1,9 @@
-"""Shared Urdheim read-path helpers: CA/call-word regex, DexScreener
+"""Shared Urdheim read-path helpers: CA/call-word regex, price
 snapshot, queue writer. Used by the twitterapi stream AND the GetXAPI
-webhook receiver — one pipeline, two transports."""
+webhook receiver — one pipeline, two transports.
+
+Price sources, in order: DexScreener, then GeckoTerminal (solana) or
+direct pool reads off the Robinhood public RPC (no key, no block)."""
 import json
 import re
 
@@ -13,6 +16,15 @@ EVM_RE = re.compile(r"0x[0-9a-fA-F]{40}")
 # DexScreener chain slugs per Urdheim chain. Solana pairs come back as
 # chainId "solana"; Robinhood Chain as "robinhood".
 CHAIN_SLUGS = {"solana": ("solana",), "robinhood": ("robinhood",)}
+
+# Robinhood Chain (4663) onchain reads: public RPC + the chain's v2
+# factory (found via pair factory(), canonical 0x5C69... not deployed).
+# Beats every aggregator block: RPC serves this box fine.
+ROBIN_RPC = "https://rpc.mainnet.chain.robinhood.com"
+ROBIN_V2_FACTORY = "0x8bCeAa40b9acdfaedf85adf4ff01f5ad6517937F"
+ROBIN_WETH = "0x0bd7d308f8e1639fab988df18a8011f41eacad73"
+MAINNET_WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+_ETH_USD = 0.0
 
 
 def detect_chain(mint: str) -> str:
@@ -65,7 +77,85 @@ def snapshot_price(mint: str, chain: str | None = None) -> dict | None:
         pass
     if chain == "solana":
         return _gt_snapshot(mint)
+    if chain == "robinhood":
+        return _evm_snapshot(mint)
     return None
+
+
+def _eth_usd() -> float:
+    """ETH price, cached per process. Coinbase first, Kraken backup,
+    GeckoTerminal last (it rate-limits datacenter IPs)."""
+    global _ETH_USD
+    if _ETH_USD:
+        return _ETH_USD
+    try:
+        r = httpx.get("https://api.coinbase.com/v2/prices/ETH-USD/spot",
+                      timeout=20)
+        _ETH_USD = float((r.json().get("data") or {}).get("amount") or 0)
+    except Exception:
+        pass
+    if not _ETH_USD:
+        try:
+            r = httpx.get("https://api.kraken.com/0/public/Ticker",
+                          params={"pair": "ETHUSD"}, timeout=20)
+            _ETH_USD = float(((r.json().get("result") or {})
+                              .get("XETHZUSD", {}).get("c") or [0])[0])
+        except Exception:
+            pass
+    if not _ETH_USD:
+        try:
+            r = httpx.get(
+                "https://api.geckoterminal.com/api/v2/networks/ethereum/tokens/"
+                + MAINNET_WETH,
+                headers={"Accept": "application/json"}, timeout=20)
+            a = (r.json().get("data") or {}).get("attributes") or {}
+            _ETH_USD = float(a.get("price_usd") or 0)
+        except Exception:
+            pass
+    return _ETH_USD
+
+
+def _rpc(method: str, params: list) -> dict:
+    r = httpx.post(ROBIN_RPC, json={"jsonrpc": "2.0", "id": 1,
+                                    "method": method, "params": params},
+                   timeout=25)
+    return r.json()
+
+
+def _evm_snapshot(mint: str) -> dict | None:
+    """Robinhood v2 pool read: getPair -> getReserves/token0/decimals.
+    Price in WETH x ETH-USD; liq = 2x WETH side (standard v2 math)."""
+    def enc(a: str) -> str:
+        return "0" * 24 + a[2:].lower()
+
+    try:
+        pair = _rpc("eth_call", [{
+            "to": ROBIN_V2_FACTORY,
+            "data": "0xe6a43905" + enc(mint) + enc(ROBIN_WETH)}, "latest"])
+        pair_addr = "0x" + (pair.get("result") or "")[-40:]
+        if int(pair_addr, 16) == 0:
+            return None
+        res = _rpc("eth_call", [{"to": pair_addr,
+                                 "data": "0x0902f1ac"}, "latest"])
+        t0 = _rpc("eth_call", [{"to": pair_addr,
+                                "data": "0x0dfe1681"}, "latest"])
+        dec = _rpc("eth_call", [{"to": mint, "data": "0x313ce567"},
+                                "latest"])
+        raw = (res.get("result") or "")[2:]
+        r0, r1 = int(raw[0:64], 16), int(raw[64:128], 16)
+        is_t0 = ("0x" + (t0.get("result") or "")[-40:]).lower() == mint.lower()
+        tok_res = r0 if is_t0 else r1
+        weth_res = r1 if is_t0 else r0
+        tdec = int((dec.get("result") or "0"), 16) or 18
+        eth = _eth_usd()
+        if not tok_res or not eth:
+            return None
+        price_weth = (weth_res / 1e18) / (tok_res / 10 ** tdec)
+        liq = 2 * (weth_res / 1e18) * eth
+        return {"chain": "robinhood", "symbol": "", "price": price_weth * eth,
+                "mcap": 0, "liq": liq}
+    except Exception:
+        return None
 
 
 def _gt_snapshot(mint: str) -> dict | None:
