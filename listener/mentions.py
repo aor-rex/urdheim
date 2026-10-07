@@ -15,11 +15,12 @@ Usage:
 import json
 import os
 import re
-import subprocess
 import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from unyx import UnyxClient  # noqa: E402
 
 from watcher.common import detect_chain, snapshot_price  # noqa: E402
 
@@ -27,8 +28,16 @@ HANDLE_RE = re.compile(r"@([A-Za-z0-9_]{1,15})")
 CA_RE = re.compile(r"0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}")
 SELF = os.environ.get("LISTENER_SELF", "ryu_ngmi").lower()
 
-UNYX = ["/opt/data/projects/uny-x/.venv/bin/python", "-m", "unyx.cli"]
-UNYX_DIR = "/opt/data/projects/uny-x"
+
+def client() -> UnyxClient:
+    """One session per poll batch. Explicit cookies path wins, UNYX_COOKIES
+    env next, ./cookies.json fallback (handled inside uny-x)."""
+    c = UnyxClient()
+    cookies = os.environ.get("LISTENER_COOKIES", "")
+    if not c.login_from_cookies(cookies or os.environ.get("UNYX_COOKIES", "") or
+                                "/opt/data/projects/uny-x/cookies.json"):
+        raise SystemExit("listener: cookie login failed")
+    return c
 
 
 def seen_path() -> str:
@@ -51,19 +60,14 @@ def save_seen(ids: set) -> None:
 
 def fetch_mentions(n: int = 20) -> list[dict]:
     """uny-x mentions -> normalized list. Free, cookie session."""
-    r = subprocess.run(UNYX + ["mentions", "-n", str(n)],
-                       capture_output=True, text=True, cwd=UNYX_DIR,
-                       timeout=120)
-    out = r.stdout[r.stdout.find("{"):] if "{" in r.stdout else "{}"
-    data = json.loads(out or "{}")
+    with client() as c:
+        data = c.mentions(n)
     items = []
     for m in data.get("mentions", []):
-        author = m.get("author") or m.get("user") or {}
-        if isinstance(author, dict):
-            author = author.get("screen_name") or author.get("username") or ""
+        user = m.get("user") or {}
         items.append({
             "id": str(m.get("id", "")),
-            "author": author,
+            "author": user.get("screen_name", "") or "",
             "text": m.get("text", "") or "",
         })
     return items
@@ -142,17 +146,17 @@ def decide(text: str, conn) -> str | None:
 def send_reply(post_id: str, text: str, dry: bool = False) -> dict:
     if dry:
         return {"dry": True, "post_id": post_id, "chars": len(text)}
-    r = subprocess.run(UNYX + ["reply", post_id, text],
-                       capture_output=True, text=True, cwd=UNYX_DIR,
-                       timeout=120)
-    if r.returncode == 0:
-        return {"via": "uny-x", "out": r.stdout[-200:]}
-    # fallback: GetXAPI reply (budget-guarded, $0.002)
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "poster"))
-    from getxapi import post as gx_post  # type: ignore
-    out = gx_post(text, os.environ.get("LISTENER_COOKIES",
-                  "/opt/data/projects/uny-x/cookies.json"))
-    return {"via": "getxapi-fallback", "out": out}
+    try:
+        with client() as c:
+            out = c.reply(post_id, text)
+        return {"via": "uny-x", "out": out}
+    except Exception as e:
+        # fallback: GetXAPI reply (budget-guarded, $0.002)
+        from poster.getxapi import post as gx_post  # type: ignore
+        out = gx_post(text, os.environ.get("LISTENER_COOKIES",
+                      "/opt/data/projects/uny-x/cookies.json"))
+        return {"via": f"getxapi-fallback (uny-x: {str(e)[:100]})",
+                "out": out}
 
 
 def run_once(dry: bool = False, test: str = "") -> None:
