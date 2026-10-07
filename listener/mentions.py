@@ -27,7 +27,7 @@ HANDLE_RE = re.compile(r"@([A-Za-z0-9_]{1,15})")
 CA_RE = re.compile(r"0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}")
 SELF = os.environ.get("LISTENER_SELF", "ryu_ngmi").lower()
 
-UNYX = ["python3", "-m", "unyx.cli"]
+UNYX = ["/opt/data/projects/uny-x/.venv/bin/python", "-m", "unyx.cli"]
 UNYX_DIR = "/opt/data/projects/uny-x"
 
 
@@ -58,9 +58,12 @@ def fetch_mentions(n: int = 20) -> list[dict]:
     data = json.loads(out or "{}")
     items = []
     for m in data.get("mentions", []):
+        author = m.get("author") or m.get("user") or {}
+        if isinstance(author, dict):
+            author = author.get("screen_name") or author.get("username") or ""
         items.append({
             "id": str(m.get("id", "")),
-            "author": (m.get("author") or m.get("user") or ""),
+            "author": author,
             "text": m.get("text", "") or "",
         })
     return items
@@ -176,7 +179,7 @@ def run_once(dry: bool = False, test: str = "") -> None:
             print(f"WOULD REPLY @{m['author']}: {reply[:200]}")
         else:
             print(send_reply(m["id"], reply))
-    save_seen(seen)
+    save_seen(seen) if not dry else None
     if conn:
         conn.close()
 
