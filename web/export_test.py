@@ -28,7 +28,7 @@ ROWS = [
      "post_id": "5", "now_price": 0.5},       # -50%
 ]
 
-callers = build(ROWS)
+callers, coins = build(ROWS)
 by = {c["handle"]: c for c in callers}
 assert by["rugguy"]["green"] == 0 and by["rugguy"]["red"] == 2
 assert by["rugguy"]["avg"] == -98 or by["rugguy"]["avg"] == -99, by["rugguy"]
@@ -36,10 +36,14 @@ assert by["hoodhero"]["chains"] == ["robinhood"], by["hoodhero"]
 assert by["hoodhero"]["green"] == 1 and by["hoodhero"]["avg"] == 150
 assert by["mixed"]["chains"] == ["robinhood", "solana"], by["mixed"]
 assert by["mixed"]["green"] == 1 and by["mixed"]["red"] == 1
-print("build: stats/chains/avg correct")
+assert set(coins) == {"aaa", "bbb", "0xabc", "ccc", "0xdef"}, coins.keys()
+assert coins["0xabc"]["touchers"][0]["handle"] == "hoodhero"
+assert coins["0xabc"]["delta"] == "+150%", coins["0xabc"]
+print("build: stats/chains/avg/coins correct")
 
-out = render(callers)
+out = render(callers, coins)
 assert out.startswith("// GENERATED") and "export const callers" in out
+assert "export const coins" in out
 with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
     f.write(out.replace("export const", "const"))
     path = f.name

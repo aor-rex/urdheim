@@ -2,3 +2,4 @@
 __pycache__/
 spend.jsonl
 seen.json
+.next/
