@@ -32,7 +32,7 @@ export default function Coin({ params }) {
       <h2 className="sans" style={{ fontSize: 13, letterSpacing: 4, color: '#c9a227', fontWeight: 400, margin: '34px 0 14px' }}>EVERY TRACKED CALLER WHO TOUCHED IT</h2>
       {c.touchers.map((t) => (
         <div key={t.handle} className="sans" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '15px 18px', border: '1px solid #2b2519', borderRadius: 4, marginBottom: 10, background: '#121009', fontSize: 13 }}>
-          <div><a href={'/caller/' + t.handle} style={{ fontSize: 15, color: '#f2ead6', fontWeight: 700, textDecoration: 'none' }}>@{t.handle}</a>
+          <div><a href={'/profile/' + t.handle} style={{ fontSize: 15, color: '#f2ead6', fontWeight: 700, textDecoration: 'none' }}>@{t.handle}</a>
             <div style={{ color: '#5a4f35', fontSize: 12 }}>{t.note}</div></div>
           <div style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 12, letterSpacing: 1 }} className={t.top ? 'rd' : 'grn'}>{t.timing}</div>
           <a href="#" style={{ color: '#c9a227', fontSize: 12 }}>receipt ↗</a>

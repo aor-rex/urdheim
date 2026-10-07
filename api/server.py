@@ -71,7 +71,7 @@ def pct(mult: float | None) -> str:
 
 
 def shape_call(row: dict) -> dict:
-    """One call + its return multiple from the latest snapshot."""
+    """One call + its return multiple from peak, state from the snapshotter."""
     at = row.get("price_at_call") or None
     now = row.get("now") or None
     mult = (now / at) if at and now else None
@@ -80,23 +80,28 @@ def shape_call(row: dict) -> dict:
         "chain": row.get("chain"), "handle": row.get("handle"),
         "then": at, "now": now, "mult": mult, "ret": pct(mult),
         "good": bool(mult and mult >= 1),
+        "peak": row.get("peak"), "peak_x": row.get("peak_x"),
+        "state": row.get("state") or "open",
         "called_at": str(row.get("called_at") or "")[:10],
         "post_url": row.get("post_url"),
     }
 
 
 def score(calls: list[dict]) -> dict:
-    scored = [c for c in calls if c["mult"] is not None]
-    green = sum(1 for c in scored if c["good"])
-    red = len(scored) - green
-    avg = (sum((c["mult"] - 1) * 100 for c in scored) / len(scored)) if scored else 0
-    if len(scored) >= 3 and green > red:
+    """Leaderboard math on peak_x (median, never best): spray-and-pray
+    callers can't top the board with one lucky runner among fifty rugs."""
+    xs = sorted(c["peak_x"] for c in calls if c.get("peak_x"))
+    green = sum(1 for c in calls if (c.get("peak_x") or 0) >= 2)
+    red = sum(1 for c in calls if c.get("state") in ("condemned", "rugged"))
+    med = xs[len(xs) // 2] if xs else None
+    avg = round((med - 1) * 100) if med else 0
+    if len(xs) >= 3 and green > red:
         seal = "VINDICATED"
-    elif len(scored) >= 3 and red > green:
+    elif len(xs) >= 3 and red > green:
         seal = "CONDEMNED"
     else:
         seal = "UNDECIDED"
-    return {"green": green, "red": red, "avg": round(avg),
+    return {"green": green, "red": red, "avg": avg,
             "seal": seal, "kind": "clean" if green >= red else "guilty"}
 
 
@@ -104,11 +109,11 @@ def verdict_sentence(handle: str, s: dict, n: int) -> str:
     if n == 0:
         return f"@{handle} is on the watchlist. No scored calls yet."
     if s["seal"] == "VINDICATED":
-        return (f"@{handle}: {s['green']} of {n} scored calls green, "
-                f"avg {s['avg']:+.0f}%. The record holds.")
+        return (f"@{handle}: {s['green']} of {n} calls ran 2x or better, "
+                f"median peak {s['avg']:+.0f}%. The record holds.")
     if s["seal"] == "CONDEMNED":
-        return (f"@{handle}: {s['red']} of {n} scored calls red, "
-                f"avg {s['avg']:+.0f}%. Fade everything.")
+        return (f"@{handle}: {s['red']} of {n} calls condemned, "
+                f"median peak {s['avg']:+.0f}%. Fade everything.")
     return (f"@{handle}: {n} calls on record, jury still out "
             f"({s['green']} green, {s['red']} red).")
 
@@ -138,6 +143,7 @@ def fetch_calls(cur, where: str, arg) -> list[dict]:
         SELECT c.coin, c.mint, c.chain, h.handle, c.price_at_call,
                c.called_at, c.post_url, c.filer_handle, c.filed_via,
                c.likes, c.reposts, c.quotes, c.views,
+               c.peak, c.peak_x, c.state,
                (SELECT s.price FROM snapshots s
                  WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
         FROM calls c JOIN callers h ON h.id = c.caller_id
@@ -165,6 +171,8 @@ def profile_map(cur, handles: set[str]) -> dict:
 
 def shape_receipt(c: dict, people: dict) -> dict:
     viral = (c.get("views") or 0) >= 40000
+    seal = {"vindicated": "VINDICATED", "condemned": "CONDEMNED",
+            "rugged": "RUGGED"}.get(c.get("state") or "open", "UNDECIDED")
     return {
         "coin": c["coin"], "mint": c["mint"], "chain": c["chain"],
         "caller": people.get(c["handle"], {"handle": c["handle"]}),
@@ -172,9 +180,9 @@ def shape_receipt(c: dict, people: dict) -> dict:
                             {"handle": c.get("filer_handle") or c["handle"]}),
         "filed_via": c.get("filed_via") or "seed",
         "then": c["then"], "now": c["now"], "mult": c["mult"],
+        "peak": c.get("peak"), "peak_x": c.get("peak_x"),
         "ret": c["ret"], "good": c["good"],
-        "seal": ("VINDICATED" if c["good"] else "CONDEMNED")
-                if c["mult"] is not None else "UNDECIDED",
+        "seal": seal,
         "viral": viral,
         "eng": {"likes": c.get("likes") or 0, "reposts": c.get("reposts") or 0,
                 "quotes": c.get("quotes") or 0, "views": c.get("views") or 0},
@@ -190,6 +198,7 @@ def feed(limit: int = 30) -> dict:
             SELECT c.coin, c.mint, c.chain, h.handle, c.price_at_call,
                    c.called_at, c.post_url, c.filer_handle, c.filed_via,
                    c.likes, c.reposts, c.quotes, c.views,
+                   c.peak, c.peak_x, c.state,
                    (SELECT s.price FROM snapshots s
                      WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
             FROM calls c JOIN callers h ON h.id = c.caller_id
@@ -217,6 +226,7 @@ def profile(handle: str) -> dict:
             SELECT c.coin, c.mint, c.chain, h.handle, c.price_at_call,
                    c.called_at, c.post_url, c.filer_handle, c.filed_via,
                    c.likes, c.reposts, c.quotes, c.views,
+                   c.peak, c.peak_x, c.state,
                    (SELECT s.price FROM snapshots s
                      WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
             FROM calls c JOIN callers h ON h.id = c.caller_id

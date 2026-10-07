@@ -22,3 +22,11 @@ CREATE INDEX IF NOT EXISTS idx_calls_filer ON calls(filer_handle);
 
 -- submissions: who tagged it in
 ALTER TABLE submissions ADD COLUMN IF NOT EXISTS filer_handle TEXT;
+
+-- snapshotter: peak tracking + state machine (open|vindicated|condemned|rugged).
+-- peak_x decides receipts + leaderboard (median, never best). state decides seals.
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS peak DOUBLE PRECISION;
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS peak_at TIMESTAMPTZ;
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS peak_x DOUBLE PRECISION;
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS state TEXT NOT NULL DEFAULT 'open';
+CREATE INDEX IF NOT EXISTS idx_calls_state ON calls(state);

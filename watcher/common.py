@@ -40,7 +40,9 @@ def is_candidate(text: str) -> bool:
 def snapshot_price(mint: str, chain: str | None = None) -> dict | None:
     """DexScreener snapshot, pairs filtered to the mint's chain.
     Same /tokens endpoint returns every chain — without the filter a
-    0x address could snapshot the wrong chain's pair."""
+    0x address could snapshot the wrong chain's pair.
+    Falls back to GeckoTerminal (solana only — robinhood chain isn't
+    indexed there) when DexScreener serves empty, e.g. datacenter IP."""
     chain = chain or detect_chain(mint)
     slugs = CHAIN_SLUGS.get(chain, ())
     try:
@@ -49,16 +51,41 @@ def snapshot_price(mint: str, chain: str | None = None) -> dict | None:
         )
         pairs = [p for p in (r.json().get("pairs") or [])
                  if p.get("chainId") in slugs]
-        if not pairs:
+        if pairs:
+            p = pairs[0]
+            base = p.get("baseToken") or {}
+            return {
+                "chain": chain,
+                "symbol": base.get("symbol") or "",
+                "price": float(p.get("priceUsd") or 0),
+                "mcap": float(p.get("fdv") or p.get("marketCap") or 0),
+                "liq": float((p.get("liquidity") or {}).get("usd") or 0),
+            }
+    except Exception:
+        pass
+    if chain == "solana":
+        return _gt_snapshot(mint)
+    return None
+
+
+def _gt_snapshot(mint: str) -> dict | None:
+    """GeckoTerminal token read: price + reserves in one free call."""
+    try:
+        r = httpx.get(
+            f"https://api.geckoterminal.com/api/v2/networks/solana/tokens/{mint}",
+            headers={"Accept": "application/json"}, timeout=20)
+        if r.status_code != 200:
             return None
-        p = pairs[0]
-        base = p.get("baseToken") or {}
+        a = (r.json().get("data") or {}).get("attributes") or {}
+        price = float(a.get("price_usd") or 0)
+        if not price:
+            return None
         return {
-            "chain": chain,
-            "symbol": base.get("symbol") or "",
-            "price": float(p.get("priceUsd") or 0),
-            "mcap": float(p.get("fdv") or p.get("marketCap") or 0),
-            "liq": float((p.get("liquidity") or {}).get("usd") or 0),
+            "chain": "solana",
+            "symbol": a.get("symbol") or "",
+            "price": price,
+            "mcap": float(a.get("fdv_usd") or a.get("market_cap_usd") or 0),
+            "liq": float(a.get("total_reserve_in_usd") or 0),
         }
     except Exception:
         return None

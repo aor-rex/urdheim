@@ -97,6 +97,12 @@ cmd_test() {
   "$ROOT/.venv/bin/python" "$ROOT/listener/mentions.py" --dry "--test=$1"
 }
 
+cmd_snap() {
+  echo "snapshotter: repricing open calls (logs: $ROOT/log/snap.log)"
+  DB_URL="${DB_URL:-}" "$ROOT/.venv/bin/python" "$ROOT/brain/snapshotter.py" "${1:-200}" \
+    2>&1 | tee -a "$ROOT/log/snap.log" | tail -5
+}
+
 cmd_snitch() {
   echo "snitch worker: processing pending submissions (logs: $ROOT/log/snitch.log)"
   "$ROOT/.venv/bin/python" "$ROOT/brain/snitch_worker.py" --limit "${1:-20}" \
@@ -110,6 +116,7 @@ case "${1:-}" in
   listen) cmd_listen "${2:-}" ;;
   test)   cmd_test "${2:-@urdheim check 0x008Df4b3E857D06c4603Aeb11F267ccD32ce2005}" ;;
   snitch) pg_ok && cmd_snitch "${2:-20}" ;;
+  snap)   pg_ok && cmd_snap "${2:-200}" ;;
   all)    pg_ok && cmd_api && cmd_dev && cmd_poll && cmd_listen ;;
-  *) echo "usage: ./run.sh poll | api | dev | listen [--dry] | test \"@urdheim ...\" | snitch [n] | all"; exit 1 ;;
+  *) echo "usage: ./run.sh poll | api | dev | listen [--dry] | test \"@urdheim ...\" | snitch [n] | snap [n] | all"; exit 1 ;;
 esac

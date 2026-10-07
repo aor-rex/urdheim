@@ -2,7 +2,7 @@
 // Shared receipt anatomy: avatar, seal, price line, engagement row.
 import {
   Heart, Repeat, Quote, Eye, Flame, Hourglass,
-  ShieldCheck, ShieldX, BadgeCheck, LogIn,
+  ShieldCheck, ShieldX, Skull, BadgeCheck, LogIn,
   Trophy, TrendingUp, Scale, Medal, Link2, Share2,
 } from 'lucide-react';
 import { avatar, fmtCount, timeAgo, fmtPrice } from '../lib/api';
@@ -33,12 +33,15 @@ export function PersonLine({ p, action, ts }) {
 
 export function Seal({ seal, mult }) {
   const cls = seal === 'VINDICATED' ? { c: '#7fb069', I: ShieldCheck }
-    : seal === 'CONDEMNED' ? { c: '#c1443c', I: ShieldX } : { c: '#8a7f63', I: Hourglass };
+    : seal === 'CONDEMNED' ? { c: '#c1443c', I: ShieldX }
+    : seal === 'RUGGED' ? { c: '#c1443c', I: Skull, fill: true }
+    : { c: '#8a7f63', I: Hourglass };
   const label = seal + (mult !== null && mult !== undefined && seal !== 'UNDECIDED'
     ? ' · ' + mult.toFixed(1) + '×' : '');
   return (
     <span className="sans" style={{ fontSize: 11, letterSpacing: 2, padding: '6px 12px',
-      borderRadius: 2, border: '1px solid ' + cls.c, color: cls.c,
+      borderRadius: 2, border: '1px solid ' + cls.c, color: cls.fill ? '#0c0a08' : cls.c,
+      background: cls.fill ? cls.c : 'transparent',
       display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap' }}>
       <cls.I size={12} />{label}
     </span>
@@ -80,7 +83,8 @@ export function Receipt({ r }) {
             <Flame size={12} />VIRAL · {fmtCount(r.eng.views)} views</span>}
           <span style={{ fontSize: 13, color: '#8a7f63' }}>
             entry <b style={{ color: '#e8e0cf', fontWeight: 400 }}>{fmtPrice(r.then) || '—'}</b>
-            {' · '}now {nowTxt}</span>
+            {' · '}now {nowTxt}
+            {r.peak_x ? <span>{' · '}peak <b style={{ color: '#c9a227', fontWeight: 400 }}>{r.peak_x.toFixed(1)}×</b></span> : ''}</span>
         </div>
         <div className="sans" style={{ display: 'flex', gap: 18, marginTop: 12, paddingTop: 12,
           borderTop: '1px solid #1a1610', fontSize: 12, color: '#5a4f35' }}>
