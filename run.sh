@@ -78,6 +78,6 @@ case "${1:-}" in
   dev)    cmd_dev ;;
   listen) cmd_listen "${2:-}" ;;
   test)   cmd_test "${2:-@urdheim check 0x008Df4b3E857D06c4603Aeb11F267ccD32ce2005}" ;;
-  all)    pg_ok && cmd_poll && cmd_api && cmd_dev && cmd_listen ;;
+  all)    pg_ok && cmd_api && cmd_dev && cmd_poll && cmd_listen ;;
   *) echo "usage: ./run.sh poll | api | dev | listen [--dry] | test \"@urdheim ...\" | all"; exit 1 ;;
 esac
