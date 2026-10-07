@@ -54,6 +54,9 @@ with open(donep, "a") as df:
 print(f"poll done: queued={n_q} recorded={n_r}", flush=True)
 EOF
   tail -3 "$ROOT/log/poll.log"
+  echo "[$(date +%H:%M:%S)] poll: processing snitch submissions"
+  "$ROOT/.venv/bin/python" "$ROOT/brain/snitch_worker.py" --limit 20 \
+    2>&1 | tee -a "$ROOT/log/snitch.log" | tail -2
 }
 
 cmd_api() {
