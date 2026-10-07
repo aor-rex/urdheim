@@ -21,17 +21,33 @@ from watcher.common import is_candidate, queue_candidate
 from listener.mentions import load_seeds
 from brain.detective import classify, record_call
 import json
+import os
 qp = "/tmp/q.jsonl"
+donep = "/tmp/q.done"
+queued = set()
+try:
+    queued = {json.loads(l).get("post_id") for l in open(qp)}
+except Exception:
+    pass
+done = set(open(donep).read().split()) if os.path.exists(donep) else set()
 n_q = 0
 for h in load_seeds():
     for t in backfill(h)[0]:
+        if str(t["id"]) in queued:
+            continue
         if is_candidate(t.get("text") or ""):
             queue_candidate(qp, h, str(t["id"]), t["text"] or "")
             n_q += 1
 n_r = 0
-for line in open(qp):
-    item = json.loads(line)
-    v = classify(item["author"], item["text"])
+with open(donep, "a") as df:
+    for line in open(qp):
+        item = json.loads(line)
+        pid = str(item.get("post_id"))
+        if pid in done:
+            continue
+        done.add(pid)
+        v = classify(item["author"], item["text"])
+        df.write(pid + "\n"); df.flush()
     print(item["author"], item["mint"][:14], "->", v["verdict"], v["confidence"], flush=True)
     if v["verdict"] == "call":
         record_call(item, v); n_r += 1
