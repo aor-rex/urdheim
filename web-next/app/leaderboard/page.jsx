@@ -46,10 +46,10 @@ export default function Leaderboard() {
             <div style={{ fontSize: 30, color: '#5a4f35', width: 52, fontStyle: 'italic' }}>{c.rank}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 21, color: '#f2ead6' }}><a href={'/caller/' + c.handle} onClick={(e) => e.stopPropagation()} style={{ color: 'inherit', textDecoration: 'none' }}>@{c.handle}</a></div>
-              <div className="sans" style={{ fontSize: 13, color: '#8a7f63', marginTop: 3 }}>{c.calls} calls · {c.green} green · avg {fmtAvg(c.avg)}</div>
+              <div className="sans" style={{ fontSize: 13, color: '#8a7f63', marginTop: 3 }}>{c.calls} call{c.calls === 1 ? '' : 's'} · {c.green} green · avg {fmtAvg(c.avg)}</div>
             </div>
             <div className="sans" style={{ display: 'flex', gap: 22, fontSize: 12, color: '#8a7f63' }}>
-              <span><b className={c.green > c.red ? 'grn' : 'rd'} style={{ display: 'block', fontSize: 19, fontFamily: 'Georgia,serif' }}>{c.green}</b>green</span>
+              <span><b className="grn" style={{ display: 'block', fontSize: 19, fontFamily: 'Georgia,serif' }}>{c.green}</b>green</span>
               <span><b className="rd" style={{ display: 'block', fontSize: 19, fontFamily: 'Georgia,serif' }}>{c.red}</b>red</span>
             </div>
             <div className={'seal ' + (c.seal === 'CONDEMNED' ? 'guilty' : c.seal === 'VINDICATED' ? 'clean' : 'mixed')}>{c.seal}</div>
