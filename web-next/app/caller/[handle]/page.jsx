@@ -9,7 +9,7 @@ export default function Caller({ params }) {
   useEffect(() => {
     apiCaller(handle).then(setC).catch(() => setMissing(true));
   }, [handle]);
-  if (missing) return <div className="wrap" style={{ paddingTop: 60 }}>No file on @{handle} — yet. <a href="/snitch" style={{ color: '#c9a227' }}>Snitch one.</a></div>;
+  if (missing) return <div className="wrap" style={{ paddingTop: 60 }}>No file on @{handle} — yet. <a href="/how" style={{ color: '#c9a227' }}>File one via tag.</a></div>;
   if (!c) return <div className="wrap" style={{ paddingTop: 60, fontStyle: 'italic', color: '#8a7f63' }}>opening the file…</div>;
   const bad = c.red >= c.green;
   return (
@@ -38,7 +38,7 @@ export default function Caller({ params }) {
       ))}
       <div className="sans" style={{ display: 'flex', gap: 12, marginTop: 26 }}>
         <a href={X_URL} style={{ padding: '12px 26px', fontSize: 12, letterSpacing: 2, textDecoration: 'none', borderRadius: 3, background: '#c9a227', color: '#0c0a08', fontWeight: 700 }}>SHARE THIS FILE ON X</a>
-        <a href="/snitch" style={{ padding: '12px 26px', fontSize: 12, letterSpacing: 2, textDecoration: 'none', borderRadius: 3, border: '1px solid #4a4132', color: '#b7a67f' }}>SNITCH A NEW CALL</a>
+        <a href="/how" style={{ padding: '12px 26px', fontSize: 12, letterSpacing: 2, textDecoration: 'none', borderRadius: 3, border: '1px solid #4a4132', color: '#b7a67f' }}>HOW TO FILE</a>
       </div>
     </div>
   );

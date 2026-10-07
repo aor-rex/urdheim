@@ -1,22 +1,33 @@
+'use client';
 import './globals.css';
-import Nav from './nav';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ScrollText, Trophy, UserRound, Info } from 'lucide-react';
 
-export const metadata = { title: 'Urdheim — every call leaves a record' };
+const NAV = [
+  ['/', 'Live receipts', ScrollText],
+  ['/leaderboard', 'Leaderboard', Trophy],
+  ['/my', 'My receipts', UserRound],
+  ['/how', 'How it works', Info],
+];
 
 export default function RootLayout({ children }) {
+  const path = usePathname() || '/';
   return (
     <html lang="en">
-      <body style={{ paddingBottom: 60 }}>
-        <Nav />
-        {children}
-        <footer>
-          <span>URDHEIM — what is written cannot be unwritten</span>
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 24 }}>
-            <a href="/leaderboard">LEADERBOARD</a>
-            <a href="/snitch">SNITCH</a>
-            <a href="https://x.com/Urdheim">X ACCOUNT</a>
-          </span>
-        </footer>
+      <body>
+        <div className="shell">
+          <aside className="rail">
+            <Link href="/" className="brand">URDHEIM<small>SHILL RECEIPTS</small></Link>
+            <div style={{ height: 18 }} />
+            {NAV.map(([href, label, I]) => (
+              <Link key={href} href={href}
+                className={'railnav' + (path === href ? ' on' : '')}>
+                <I />{label}</Link>
+            ))}
+          </aside>
+          {children}
+        </div>
       </body>
     </html>
   );

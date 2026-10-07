@@ -179,6 +179,7 @@ def shape_receipt(c: dict, people: dict) -> dict:
         "eng": {"likes": c.get("likes") or 0, "reposts": c.get("reposts") or 0,
                 "quotes": c.get("quotes") or 0, "views": c.get("views") or 0},
         "called_at": c["called_at"], "post_url": c["post_url"],
+        "ts": c.get("ts") or c["called_at"],
     }
 
 
@@ -204,6 +205,7 @@ def feed(limit: int = 30) -> dict:
             c.update({k: raw.get(k) for k in
                       ("filer_handle", "filed_via", "likes", "reposts",
                        "quotes", "views")})
+            c["ts"] = str(raw.get("called_at") or "")
             receipts.append(shape_receipt(c, people))
     return {"receipts": receipts}
 
@@ -235,6 +237,7 @@ def profile(handle: str) -> dict:
             c.update({k: raw.get(k) for k in
                       ("filer_handle", "filed_via", "likes", "reposts",
                        "quotes", "views")})
+            c["ts"] = str(raw.get("called_at") or "")
             receipts.append(shape_receipt(c, people))
         filed = sum(1 for r in raws
                     if (r.get("filer_handle") or r["handle"]) == handle)
@@ -250,10 +253,13 @@ def leaderboard() -> dict:
     with conn() as cn, cn.cursor() as cur:
         cur.execute("SELECT handle FROM callers ORDER BY added_at")
         handles = [r[0] for r in cur.fetchall()]
+        people = profile_map(cur, set(handles))
         rows = []
         for i, h in enumerate(handles, 1):
             calls = fetch_calls(cur, "h.handle = %s", h)
-            rows.append(caller_row(h, calls, str(i)))
+            row = caller_row(h, calls, str(i))
+            row["profile"] = people.get(h, {"handle": h})
+            rows.append(row)
     return {"callers": rows}
 
 
