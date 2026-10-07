@@ -1,13 +1,16 @@
-import { coins } from '../../../lib/data';
+'use client';
+import { use, useEffect, useState } from 'react';
+import { apiCoin } from '../../../lib/api';
 
-export function generateStaticParams() {
-  return Object.keys(coins).map((mint) => ({ mint }));
-}
-
-export default async function Coin({ params }) {
-  const { mint } = await params;
-  const c = coins[mint];
-  if (!c) return <div className="wrap" style={{ paddingTop: 60 }}>No record on this coin — yet.</div>;
+export default function Coin({ params }) {
+  const { mint } = use(params);
+  const [c, setC] = useState(null);
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    apiCoin(mint).then(setC).catch(() => setMissing(true));
+  }, [mint]);
+  if (missing) return <div className="wrap" style={{ paddingTop: 60 }}>No record on this coin — yet.</div>;
+  if (!c) return <div className="wrap" style={{ paddingTop: 60, fontStyle: 'italic', color: '#8a7f63' }}>reading the stone…</div>;
   const bars = [100, 88, 70, 44, 26, 14, 8, 16, 5, 3];
   return (
     <div className="wrap" style={{ paddingTop: 40 }}>
@@ -15,7 +18,7 @@ export default async function Coin({ params }) {
       <div style={{ border: '1px solid #2b2519', borderRadius: 4, background: '#121009', padding: 36, marginBottom: 20 }}>
         <div className="sans" style={{ fontSize: 12, color: '#5a4f35', letterSpacing: 1 }}>MINT {c.mint} · {c.chain}</div>
         <h1 style={{ fontSize: 48, fontWeight: 400, margin: '6px 0' }}>{c.coin}</h1>
-        <div className="sans" style={{ fontSize: 12, letterSpacing: 3, color: '#c1443c', border: '2px solid #c1443c', padding: '8px 16px', borderRadius: 6, transform: 'rotate(-3deg)', display: 'inline-block', marginTop: 10 }}>RUGGED {c.delta}</div>
+        <div className="sans" style={{ fontSize: 12, letterSpacing: 3, color: '#c1443c', border: '2px solid #c1443c', padding: '8px 16px', borderRadius: 6, transform: 'rotate(-3deg)', display: 'inline-block', marginTop: 10 }}>{c.dead ? 'RUGGED' : 'TRACKED'} {c.delta}</div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 130, margin: '26px 0 8px' }}>
           {bars.map((h, i) => (
             <div key={i} style={{ flex: 1, borderRadius: '3px 3px 0 0', minHeight: 6, height: h + '%',

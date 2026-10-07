@@ -69,13 +69,19 @@ def record_call(item: dict, verdict: dict) -> None:
                     (item.get("author", "?"),))
         caller_id = cur.fetchone()[0]
         snap = item.get("snapshot") or {}
+        if not snap.get("price") and item.get("mint"):
+            from watcher.common import snapshot_price
+            snap = snapshot_price(item["mint"],
+                                  item.get("chain")) or {}
+        coin = (item.get("coin") not in (None, "?", "")
+                and item["coin"]) or snap.get("symbol") or "?"
         cur.execute(
             """INSERT INTO calls(caller_id, coin, mint, chain, price_at_call,
                                  mcap_at_call, post_url, post_id, called_at,
                                  verdict, confidence, evidence_quote)
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, now(), %s, %s, %s)
                ON CONFLICT (post_id) DO NOTHING""",
-            (caller_id, item.get("coin", "?"), item.get("mint"),
+            (caller_id, coin, item.get("mint"),
              item.get("chain") or (snap.get("chain") or "solana"),
              snap.get("price"), snap.get("mcap"),
              f"https://x.com/i/status/{item.get('post_id')}",

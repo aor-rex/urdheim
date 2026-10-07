@@ -52,8 +52,10 @@ def snapshot_price(mint: str, chain: str | None = None) -> dict | None:
         if not pairs:
             return None
         p = pairs[0]
+        base = p.get("baseToken") or {}
         return {
             "chain": chain,
+            "symbol": base.get("symbol") or "",
             "price": float(p.get("priceUsd") or 0),
             "mcap": float(p.get("fdv") or p.get("marketCap") or 0),
             "liq": float((p.get("liquidity") or {}).get("usd") or 0),

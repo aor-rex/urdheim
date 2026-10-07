@@ -1,11 +1,18 @@
 'use client';
-import { useState } from 'react';
-import { callers, fmtAvg } from '../../lib/data';
+import { useEffect, useState } from 'react';
+import { apiLeaderboard, fmtAvg } from '../../lib/api';
 
 export default function Leaderboard() {
   const [tab, setTab] = useState('all');
   const [chain, setChain] = useState('all');
-  const [open, setOpen] = useState('Cryptoceleb1');
+  const [open, setOpen] = useState(null);
+  const [callers, setCallers] = useState(null);
+  const [err, setErr] = useState(null);
+  useEffect(() => {
+    apiLeaderboard().then((d) => setCallers(d.callers)).catch((e) => setErr(String(e)));
+  }, []);
+  if (err) return <div className="wrap" style={{ paddingTop: 60 }}>api down: {err} — is <span className="sans">./run.sh api</span> running?</div>;
+  if (!callers) return <div className="wrap" style={{ paddingTop: 60, fontStyle: 'italic', color: '#8a7f63' }}>consulting the stones…</div>;
   const shown = callers.filter((c) => tab === 'all' || c.kind === tab)
     .filter((c) => chain === 'all' || (c.chains || ['solana']).includes(chain));
   return (

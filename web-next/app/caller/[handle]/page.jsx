@@ -1,13 +1,16 @@
-import { callers, fmtAvg, X_URL } from '../../../lib/data';
+'use client';
+import { use, useEffect, useState } from 'react';
+import { apiCaller, fmtAvg, X_URL } from '../../../lib/api';
 
-export function generateStaticParams() {
-  return callers.map((c) => ({ handle: c.handle }));
-}
-
-export default async function Caller({ params }) {
-  const { handle } = await params;
-  const c = callers.find((x) => x.handle === handle);
-  if (!c) return <div className="wrap" style={{ paddingTop: 60 }}>No file on @{handle} — yet. <a href="/snitch" style={{ color: '#c9a227' }}>Snitch one.</a></div>;
+export default function Caller({ params }) {
+  const { handle } = use(params);
+  const [c, setC] = useState(null);
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    apiCaller(handle).then(setC).catch(() => setMissing(true));
+  }, [handle]);
+  if (missing) return <div className="wrap" style={{ paddingTop: 60 }}>No file on @{handle} — yet. <a href="/snitch" style={{ color: '#c9a227' }}>Snitch one.</a></div>;
+  if (!c) return <div className="wrap" style={{ paddingTop: 60, fontStyle: 'italic', color: '#8a7f63' }}>opening the file…</div>;
   const bad = c.red >= c.green;
   return (
     <div className="wrap" style={{ paddingTop: 40 }}>
@@ -16,7 +19,7 @@ export default async function Caller({ params }) {
         <div className={'seal ' + (bad ? 'guilty' : 'clean')} style={{ position: 'absolute', top: 28, right: 28, transform: 'rotate(6deg)', fontSize: 12, padding: '8px 16px', borderWidth: 2, borderRadius: 6 }}>{c.seal}</div>
         <h1 style={{ fontSize: 44, fontWeight: 400 }}>@{c.handle}</h1>
         <div className="sans" style={{ fontSize: 12, color: '#8a7f63', letterSpacing: 1, marginTop: 6 }}>
-          ON RECORD{c.since ? ' SINCE ' + c.since : ''} · {c.calls} CALLS FILED
+          ON RECORD · {c.calls} CALLS FILED
         </div>
         <div className="sans" style={{ display: 'flex', gap: 34, margin: '26px 0', fontSize: 12, color: '#8a7f63' }}>
           <span><b className={c.green >= c.red ? 'grn' : 'rd'} style={{ display: 'block', fontSize: 28, fontFamily: 'Georgia,serif' }}>{c.green}</b>green</span>

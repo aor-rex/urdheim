@@ -38,8 +38,15 @@ for line in open(qp):
 print(f"poll done: queued={n_q} recorded={n_r}", flush=True)
 EOF
   tail -3 "$ROOT/log/poll.log"
-  echo "[$(date +%H:%M:%S)] poll: exporting dashboard data"
-  DB_URL="$DB_URL" "$ROOT/.venv/bin/python" "$ROOT/web/export.py"
+}
+
+cmd_api() {
+  echo "api: http://localhost:8091/api/leaderboard (logs: $ROOT/log/api.log, ctrl-c to stop)"
+  (cd "$ROOT" && ./.venv/bin/python -m uvicorn api.server:app --port 8091 \
+    >"$ROOT/log/api.log" 2>&1 &)
+  sleep 3
+  tail -3 "$ROOT/log/api.log"
+  curl -s http://localhost:8091/api/stats || echo "api not up — check $ROOT/log/api.log"
 }
 
 cmd_dev() {
@@ -67,9 +74,10 @@ cmd_test() {
 
 case "${1:-}" in
   poll)   pg_ok && cmd_poll ;;
+  api)    pg_ok && cmd_api ;;
   dev)    cmd_dev ;;
   listen) cmd_listen "${2:-}" ;;
   test)   cmd_test "${2:-@urdheim check 0x008Df4b3E857D06c4603Aeb11F267ccD32ce2005}" ;;
-  all)    pg_ok && cmd_poll && cmd_dev && cmd_listen ;;
-  *) echo "usage: ./run.sh poll | dev | listen [--dry] | test \"@urdheim ...\" | all"; exit 1 ;;
+  all)    pg_ok && cmd_poll && cmd_api && cmd_dev && cmd_listen ;;
+  *) echo "usage: ./run.sh poll | api | dev | listen [--dry] | test \"@urdheim ...\" | all"; exit 1 ;;
 esac

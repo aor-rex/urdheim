@@ -1,4 +1,4 @@
-import { X_URL } from '../lib/data';
+import { X_URL } from '../lib/api';
 
 export default function Home() {
   return (
