@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Service dispatcher. CMD is one of: api | receiver | poll | snap | listen.
+set -u
+cd /app
+
+apply_schema() {
+  python -c "
+import os, psycopg
+db = os.environ['DB_URL']
+with psycopg.connect(db) as c, c.cursor() as cur:
+    cur.execute(open('/app/schema.sql').read())
+    cur.execute(open('/app/migrate.sql').read())
+    c.commit()
+print('schema: ok')"
+}
+
+case "${1:-api}" in
+  api)
+    apply_schema
+    exec python -m uvicorn api.server:app --host 0.0.0.0 --port 8091
+    ;;
+  receiver)
+    exec python -m uvicorn receiver.hook:app --host 0.0.0.0 --port 8091
+    ;;
+  poll)
+    # backfill + classify + snitch, every POLL_EVERY (default 10 min)
+    while true; do
+      python - <<'EOF'
+from watcher.getxapi import backfill
+from watcher.common import is_candidate, queue_candidate
+from listener.mentions import load_seeds
+from brain.detective import classify, record_call
+import json, os
+donep = "/tmp/q.done"
+done = set(open(donep).read().split()) if os.path.exists(donep) else set()
+with open(donep, "a") as df:
+    for h in load_seeds():
+        for t in backfill(h)[0]:
+            if not is_candidate(t.get("text") or ""):
+                continue
+            queue_candidate("/tmp/q.jsonl", h, str(t["id"]), t["text"] or "")
+    for line in open("/tmp/q.jsonl"):
+        item = json.loads(line)
+        pid = str(item.get("post_id"))
+        if pid in done:
+            continue
+        done.add(pid)
+        df.write(pid + "\n"); df.flush()
+        v = classify(item["author"], item["text"])
+        print(item["author"], (item.get("mint") or "")[:14], "->", v["verdict"], flush=True)
+        if v["verdict"] == "call":
+            record_call(item, v)
+print("poll done", flush=True)
+EOF
+      python brain/snitch_worker.py --limit 20
+      sleep "${POLL_EVERY:-600}"
+    done
+    ;;
+  snap)
+    # reprice open calls, every SNAP_EVERY (default 15 min)
+    while true; do
+      python brain/snapshotter.py "${SNAP_LIMIT:-200}"
+      sleep "${SNAP_EVERY:-900}"
+    done
+    ;;
+  listen)
+    while true; do
+      python listener/mentions.py --once >>/tmp/listen.log 2>&1
+      sleep 60
+    done
+    ;;
+  *)
+    echo "usage: api | receiver | poll | snap | listen"; exit 1 ;;
+esac

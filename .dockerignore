@@ -1,0 +1,11 @@
+.venv/
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.env
+cookies.json
+log/
+*.db
+*.egg-info/
+.git/
