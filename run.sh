@@ -61,10 +61,15 @@ cmd_listen() {
   done
 }
 
+cmd_test() {
+  "$ROOT/.venv/bin/python" "$ROOT/listener/mentions.py" --dry "--test=$1"
+}
+
 case "${1:-}" in
   poll)   pg_ok && cmd_poll ;;
   dev)    cmd_dev ;;
   listen) cmd_listen "${2:-}" ;;
+  test)   cmd_test "${2:-@urdheim check 0x008Df4b3E857D06c4603Aeb11F267ccD32ce2005}" ;;
   all)    pg_ok && cmd_poll && cmd_dev && cmd_listen ;;
-  *) echo "usage: ./run.sh poll | dev | listen [--dry] | all"; exit 1 ;;
+  *) echo "usage: ./run.sh poll | dev | listen [--dry] | test \"@urdheim ...\" | all"; exit 1 ;;
 esac
