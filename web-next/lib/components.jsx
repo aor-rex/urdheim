@@ -57,7 +57,7 @@ export function Receipt({ r }) {
     ? <b style={{ color: r.good ? '#7fb069' : '#c1443c', fontWeight: 400 }}>{fmtPrice(r.now)}</b>
     : <b style={{ fontWeight: 400 }}>awaiting snapshot</b>;
   return (
-    <div style={{ borderBottom: '1px solid #2b2519', padding: '20px 28px', display: 'flex', gap: 14 }}>
+    <div className="rcard" style={{ borderBottom: '1px solid #2b2519', display: 'flex', gap: 14 }}>
       <Avatar url={filer.avatar} name={filer.name || filer.handle} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <PersonLine p={filer} action={actionText(r)} ts={r.ts} />

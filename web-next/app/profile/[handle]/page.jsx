@@ -48,6 +48,9 @@ export default function Profile({ params }) {
             </div>))}
         </div>
         {receipts.map((r, i) => <Receipt key={r.mint + i} r={r} />)}
+        {receipts.length === 0 && (
+          <div style={{ padding: 40, fontStyle: 'italic', color: '#8a7f63' }}>
+            Nothing filed yet. Tag @urdheim on a call post and it lands here.</div>)}
       </div>
       <aside className="siderail">
         {best && (
