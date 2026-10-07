@@ -7,11 +7,13 @@ import os
 import httpx
 
 API_BASE = os.environ.get("OPENCODE_API_BASE", "https://api.opencode.ai/v1")
+API_PATH = os.environ.get("OPENCODE_API_PATH", "/chat/completions")
+SESSION = os.environ.get("OPENCODE_SESSION", "urdheim-brain")
 PROMPT = """You review Solana memecoin X posts. Decide if the post is a CALL:
 - "call": explicitly shilling a coin (CA posted, buy language, entry talk)
 - "soft-shill": implies interest, denies intent ("not saying buy, just observing")
 - "chatting": merely discussing, no shill
-Reply ONLY as JSON: {"verdict": "...", "confidence": 0.0-1.0, "evidence": "short quote"}
+Reply ONLY as JSON: {{{{"verdict": "...", "confidence": 0.0-1.0, "evidence": "short quote"}}}}
 Post by {author}: {text}"""
 
 
@@ -21,18 +23,35 @@ def classify(author: str, text: str) -> dict:
     if not key or not model:
         raise SystemExit("set OPENCODE_API_KEY and DETECT_MODEL")
     r = httpx.post(
-        API_BASE + "/chat/completions",
-        headers={"Authorization": "Bearer " + key},
+        API_BASE + API_PATH,
+        headers={"Authorization": "Bearer " + key,
+                 "x-opencode-session": SESSION,
+                 "User-Agent": "urdheim/1.0"},
         json={
             "model": model,
             "messages": [{"role": "user", "content": PROMPT.format(
                 author=author, text=text)}],
             "temperature": 0,
+        } if API_PATH.endswith("chat/completions") else {
+            "model": model,
+            "input": PROMPT.format(author=author, text=text),
         },
         timeout=60,
     )
     r.raise_for_status()
-    content = r.json()["choices"][0]["message"]["content"]
+    body = r.json()
+    if "choices" in body:  # chat/completions shape
+        content = body["choices"][0]["message"]["content"]
+    else:  # responses shape: output[].content[].text
+        chunks = []
+        for item in body.get("output", []):
+            for part in item.get("content", []):
+                if part.get("type") == "output_text":
+                    chunks.append(part.get("text", ""))
+        content = "".join(chunks)
+    content = content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1].rsplit("```", 1)[0]
     return json.loads(content)
 
 
