@@ -34,7 +34,7 @@ def flop(cur):
     handle, coin, mint, then, url, now = r
     pct = (now - then) / then * 100
     return (f"receipt of the day: @{handle} called ${coin} at {then:g}, "
-            f"now {now:g} ({pct:+.0f}%). full record:")
+            f"now {now:g} ({pct:+.0f}%). full record: {url}")
 
 
 def listing(cur):
@@ -67,7 +67,23 @@ def siren(cur):
             f"from call. the receipt: {url}")
 
 
-JOBS = {"flop": flop, "listing": listing, "siren": siren}
+def recap(cur):
+    cur.execute(
+        """SELECT c.handle, cl.coin, cl.peak_x
+           FROM calls cl JOIN callers c ON c.id = cl.caller_id
+           WHERE cl.called_at > now() - interval '7 days'
+             AND cl.peak_x IS NOT NULL
+           ORDER BY cl.peak_x DESC LIMIT 1"""
+    )
+    r = cur.fetchone()
+    if not r:
+        return None
+    handle, coin, px = r
+    return (f"week in receipts: best call @{handle} ${coin} peaked {px:.1f}x. "
+            f"every call gets one: urdheim")
+
+
+JOBS = {"flop": flop, "listing": listing, "siren": siren, "recap": recap}
 
 
 def post(text: str, dry: bool) -> str:
@@ -85,6 +101,8 @@ def post(text: str, dry: bool) -> str:
 
 
 def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in JOBS:
+        raise SystemExit(f"usage: heimdall.py {'|'.join(JOBS)} [--dry]")
     job, dry = sys.argv[1], "--dry" in sys.argv
     with db() as conn, conn.cursor() as cur:
         text = JOBS[job](cur)
