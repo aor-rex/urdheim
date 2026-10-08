@@ -57,7 +57,7 @@ export default function Landing() {
             no "you had to be there".</p>
           <div className="ctas">
             <Link href="/feed" className="cta gold"><ScrollText size={15} />SEE LIVE RECEIPTS<ArrowRight size={15} /></Link>
-            <Link href="/my" className="cta line"><XIcon size={15} />SIGN IN WITH X</Link>
+            <Link href="/my" className="cta line"><XIcon size={15} />SIGN IN</Link>
           </div>
           {stats && (
             <div className="livebar">

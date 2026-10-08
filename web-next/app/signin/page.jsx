@@ -26,7 +26,7 @@ export default function SignIn({ searchParams }) {
               marginTop: 26, background: '#e8e0cf', color: '#0c0a08', fontWeight: 700,
               fontSize: 13, letterSpacing: 1, padding: 14, borderRadius: 4,
               textDecoration: 'none' }}>
-            <XIcon size={15} />SIGN IN WITH X</a>
+            <XIcon size={15} />SIGN IN</a>
           <p className="sans" style={{ fontSize: 11, letterSpacing: 1, color: '#5a4f35', marginTop: 16 }}>
             We read your handle, photo and bio. Nothing else. <a href={X_URL}>@Urdheim</a></p>
         </div>
