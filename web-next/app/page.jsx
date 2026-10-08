@@ -20,11 +20,18 @@ const WORDS = [
 function ReceiptWord() {
   const [i, setI] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setI(v => (v + 1) % WORDS.length), 2600);
+    const id = setInterval(() => setI(v => (v + 1) % WORDS.length), 5200);
     return () => clearInterval(id);
   }, []);
   const w = WORDS[i];
-  return <span key={i} className={'swapword ' + w.c}>{w.t}</span>;
+  return (
+    <span key={i} className={'swapword ' + w.c} aria-label={w.t}>
+      {w.t.split('').map((ch, k) => (
+        <span key={k} className="swapch" style={{ animationDelay: (k * 0.3) + 's' }}>
+          {ch === ' ' ? ' ' : ch}</span>
+      ))}
+    </span>
+  );
 }
 
 export default function Landing() {

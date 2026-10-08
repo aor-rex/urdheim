@@ -115,12 +115,12 @@ export function SignInBox() {
   return (
     <div style={{ background: '#1a1610', border: '1px solid #c9a227', borderRadius: 6, padding: '18px 16px', marginBottom: 18 }}>
       <p style={{ fontSize: 14, fontStyle: 'italic', color: '#9a8c6c', lineHeight: 1.6 }}>
-        Sign in to collect your own receipts. Every call you file lands on your public record.</p>
-      <button className="sans" disabled title="X sign-in lands with OAuth creds"
+        Sign in to claim your filings. Every call you file lands under your name.</p>
+      <a href="/signin" className="sans"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, width: '100%',
           marginTop: 14, background: '#e8e0cf', color: '#0c0a08', fontWeight: 700, fontSize: 13,
-          letterSpacing: 1, padding: 12, border: 'none', borderRadius: 4, cursor: 'not-allowed', opacity: 0.55 }}>
-        <LogIn size={15} />SIGN IN WITH X</button>
+          letterSpacing: 1, padding: 12, borderRadius: 4, textDecoration: 'none' }}>
+        <LogIn size={15} />SIGN IN WITH X</a>
     </div>
   );
 }
