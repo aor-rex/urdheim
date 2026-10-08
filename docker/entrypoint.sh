@@ -29,7 +29,7 @@ case "${1:-api}" in
 from watcher.getxapi import backfill
 from watcher.common import is_candidate, queue_candidate
 from listener.mentions import load_seeds
-from brain.detective import classify, record_call, RECORDABLE, MIN_CONF
+from brain.detective import classify, record_call
 from brain.budget import BudgetStop
 import json, os
 donep = os.environ.get("DONE_PATH", "/tmp/q.done")
@@ -65,7 +65,7 @@ with open(donep, "a") as df:
             print(f"classify skip {pid}: {str(e)[:120]}", flush=True)
             continue
         print(item["author"], (item.get("mint") or "")[:14], "->", v["verdict"], flush=True)
-        if v["verdict"] in RECORDABLE and v.get("confidence", 0) >= MIN_CONF:
+        if v["verdict"] == "call":
             try:
                 record_call(item, v)
             except Exception as e:

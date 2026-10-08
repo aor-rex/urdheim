@@ -9,8 +9,6 @@ import httpx
 API_BASE = os.environ.get("OPENCODE_API_BASE", "https://api.opencode.ai/v1")
 API_PATH = os.environ.get("OPENCODE_API_PATH", "/chat/completions")
 SESSION = os.environ.get("OPENCODE_SESSION", "urdheim-brain")
-RECORDABLE = ("call", "soft-shill")
-MIN_CONF = 0.7
 PROMPT = """You review Solana memecoin X posts. Decide if the post is a CALL:
 - "call": explicitly shilling a coin (CA posted, buy language, entry talk)
 - "soft-shill": implies interest, denies intent ("not saying buy, just observing")
@@ -121,8 +119,8 @@ def main():
                 continue
             print(json.dumps({"post_id": item.get("post_id"),
                               "mint": item.get("mint"), **v}), flush=True)
-            if v.get("verdict") in RECORDABLE and v.get(
-                    "confidence", 0) >= MIN_CONF:
+            if v.get("verdict") in ("call", "soft-shill") and v.get(
+                    "confidence", 0) >= 0.7:
                 record_call(item, v)
 
 
