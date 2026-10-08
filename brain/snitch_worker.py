@@ -81,14 +81,16 @@ def process(limit: int = 20) -> dict:
             cur.execute("UPDATE submissions SET status='accepted' WHERE id=%s",
                         (sid,))
             out["accepted"] += 1
-            cur.execute("SELECT 1 FROM callers WHERE handle = %s", (author,))
-            if not cur.fetchone():
-                cur.execute("""SELECT COUNT(*) FROM submissions
-                               WHERE suggested_caller = %s AND status = 'accepted'""",
-                            (author,))
-                if (cur.fetchone()[0] or 0) + 0 >= 3:
-                    out["enrolled"].append(author)
-                    print(enroll_caller(author))
+            # 3 accepted nominations naming the same handle enroll it.
+            # Mention rows store "author:mint", form rows the handle.
+            # Fires on the 3rd (enroll_caller dedupes after that).
+            nominated = (suggested or "").split(":")[0] or author
+            cur.execute("""SELECT COUNT(*) FROM submissions
+                           WHERE suggested_caller = %s AND status = 'accepted'""",
+                        (suggested,))
+            if (cur.fetchone()[0] or 0) == 3:
+                out["enrolled"].append(nominated)
+                print(enroll_caller(nominated))
         cn.commit()
     client.close()
     return out

@@ -126,7 +126,7 @@ def caller_file(conn, handle: str) -> str | None:
         total, last = cur.fetchone()
     return (f"@{handle}: {total or 0} calls on record"
             + (f", last {str(last)[:10]}" if last else "")
-            + f" · full file: urdheim/caller/{handle}")
+            + f" · full file: urdheim/profile/{handle}")
 
 
 def seed_path() -> str:
@@ -151,11 +151,11 @@ def enroll_caller(handle: str) -> str:
     p = seed_path()
     seeds = load_seeds()
     if handle.lower() in [h.lower() for h in seeds]:
-        return f"@{handle} is already tracked — file: urdheim/caller/{handle}"
+        return f"@{handle} is already tracked — file: urdheim/profile/{handle}"
     seeds.append(handle)
     json.dump([{"handle": h} for h in seeds], open(p, "w"), indent=2)
     return (f"tracking @{handle} — on the watchlist. "
-            f"first card lands at urdheim/caller/{handle} once calls land.")
+            f"first card lands at urdheim/profile/{handle} once calls land.")
 
 
 def enroll_call(conn, author: str, mint: str, post_id: str) -> str:
