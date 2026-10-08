@@ -83,14 +83,14 @@ export default function RootLayout({ children }) {
                 {href === '/my' ? <Avatar onHandle={setMine} /> : <I />}{short}</Link>
             ))}
           </nav>
+          <footer className="appfoot">
+            <span>URDHEIM — SHILL RECEIPTS</span>
+            <span className="social">
+              <a href="https://x.com/Urdheim" target="_blank" rel="noreferrer"><XIcon /></a>
+              <a href="https://github.com/aor-rex/urdheim" target="_blank" rel="noreferrer"><GithubIcon /></a>
+            </span>
+          </footer>
         </div>
-        <footer className="appfoot">
-          <span>URDHEIM — SHILL RECEIPTS</span>
-          <span className="social">
-            <a href="https://x.com/Urdheim" target="_blank" rel="noreferrer"><XIcon /></a>
-            <a href="https://github.com/aor-rex/urdheim" target="_blank" rel="noreferrer"><GithubIcon /></a>
-          </span>
-        </footer>
       </body>
     </html>
   );
