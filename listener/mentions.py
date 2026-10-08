@@ -141,6 +141,7 @@ def load_seeds() -> list[str]:
         with conn, conn.cursor() as cur:
             cur.execute("SELECT handle FROM watched WHERE active ORDER BY added_at")
             rows = [r[0] for r in cur.fetchall()]
+            conn.close()
             if rows:
                 return rows
     except Exception:
@@ -160,6 +161,7 @@ def enroll_caller(handle: str) -> str:
                 "ON CONFLICT (handle) DO UPDATE SET active = TRUE",
                 (handle,))
             conn.commit()
+        conn.close()
     except Exception as e:
         return f"couldn't track @{handle} — db unreachable ({str(e)[:80]})"
     return (f"tracking @{handle} — on the watchlist. "
