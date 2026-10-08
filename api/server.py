@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import httpx
 import psycopg  # noqa: E402
-from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 app = FastAPI(title="urdheim-api")
@@ -42,9 +42,11 @@ def verify_turnstile(token: str) -> bool:
 
 
 @app.post("/api/snitch")
-def snitch(body: dict) -> dict:
+def snitch(body: dict, request: Request) -> dict:
     url = (body.get("post_url") or "").strip()
     handle = (body.get("handle") or "").strip().lstrip("@")
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "web"))
     if not url.startswith("https://x.com/") and not url.startswith("https://twitter.com/"):
         raise HTTPException(400, "post link must be an x.com url")
     if not verify_turnstile(body.get("turnstile") or ""):
@@ -57,7 +59,7 @@ def snitch(body: dict) -> dict:
             """INSERT INTO submissions (post_url, suggested_caller,
                                         reporter_ip, status)
                VALUES (%s, %s, %s, 'pending') RETURNING id""",
-            (url, handle or None, "web"))
+            (url, handle or None, ip))
         sid = cur.fetchone()[0]
         cn.commit()
     return {"ok": True, "id": sid}
