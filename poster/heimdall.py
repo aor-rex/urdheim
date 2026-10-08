@@ -97,6 +97,8 @@ def post(text: str, dry: bool) -> str:
              "UNYX_COOKIES": os.environ.get("POSTER_COOKIES", "")},
     )
     print(out.stdout.strip() or out.stderr.strip()[-300:], flush=True)
+    if out.returncode != 0:
+        raise RuntimeError(f"post failed: {out.stderr.strip()[-200:]}")
     return out.stdout.strip()
 
 
