@@ -168,9 +168,16 @@ def admin_purge(request: Request, handle: str = "") -> dict:
     if not key or request.headers.get("x-admin-key") != key or not handle:
         raise HTTPException(404)
     with conn() as cn, cn.cursor() as cur:
-        cur.execute("DELETE FROM calls WHERE handle=%s", (handle,))
-        n = cur.rowcount
-        cur.execute("DELETE FROM callers WHERE handle=%s", (handle,))
+        cur.execute("SELECT id FROM callers WHERE handle=%s", (handle,))
+        r = cur.fetchone()
+        n = 0
+        if r:
+            cur.execute("DELETE FROM snapshots WHERE call_id IN "
+                        "(SELECT id FROM calls WHERE caller_id=%s)", (r[0],))
+            cur.execute("DELETE FROM calls WHERE caller_id=%s", (r[0],))
+            n = cur.rowcount
+            cur.execute("DELETE FROM callers WHERE id=%s", (r[0],))
+        cur.execute("UPDATE watched SET active=FALSE WHERE handle=%s", (handle,))
         cn.commit()
     return {"deleted_calls": n}
 
