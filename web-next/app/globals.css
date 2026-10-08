@@ -18,7 +18,7 @@ footer a{color:#8a7f63;text-decoration:none}
 .seal.guilty{color:#c1443c;border-color:#c1443c}
 .seal.clean{color:#7fb069;border-color:#7fb069}
 .seal.mixed{color:#c9a227;border-color:#c9a227}
-.shell{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr) 300px;min-height:100vh}
+.shell{margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr) 300px;min-height:100vh}
 .rail{border-right:1px solid #2b2519;padding:28px 20px;position:sticky;top:0;height:100vh}
 .rail .brand{font-size:20px;letter-spacing:5px;color:#f2ead6;text-decoration:none;display:block}
 .rail .brand small{display:block;font-family:Verdana,sans-serif;font-size:10px;letter-spacing:3px;color:#5a4f35;margin-top:6px}

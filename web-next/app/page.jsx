@@ -12,26 +12,41 @@ const STEPS = [
   [Scale, 'The verdict lands', 'Open calls get repriced. Green holds, red condemns. The receipt updates itself.'],
 ];
 
-const WORDS = [
-  { t: 'απόδειξη', c: 'greek' },
-  { t: 'receipt', c: 'latin' },
-];
+const GREEK = 'αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ';
 
-function ReceiptWord() {
-  const [i, setI] = useState(0);
+function ScrambleWord() {
+  // Greek noise resolves left to right into RECEIPT, holds, scrambles again.
+  const FINAL = 'receipt';
+  const [text, setText] = useState(FINAL);
+  const [done, setDone] = useState(true);
   useEffect(() => {
-    const id = setInterval(() => setI(v => (v + 1) % WORDS.length), 5200);
-    return () => clearInterval(id);
+    let frame = 0;
+    let live = true;
+    const pick = () => GREEK[Math.floor(Math.random() * GREEK.length)];
+    const id = setInterval(() => {
+      if (!live) return;
+      frame += 1;
+      if (frame < 8) {
+        // full scramble
+        setDone(false);
+        setText(Array.from({ length: FINAL.length },
+          () => pick()).join(''));
+      } else if (frame < 8 + FINAL.length * 3) {
+        // resolve one letter every 3 frames
+        const n = Math.min(FINAL.length,
+          Math.floor((frame - 8) / 3) + 1);
+        setText(FINAL.slice(0, n) + Array.from(
+          { length: FINAL.length - n }, () => pick()).join(''));
+      } else if (frame < 8 + FINAL.length * 3 + 40) {
+        setText(FINAL);
+        setDone(true);
+      } else {
+        frame = 0;
+      }
+    }, 60);
+    return () => { live = false; clearInterval(id); };
   }, []);
-  const w = WORDS[i];
-  return (
-    <span key={i} className={'swapword ' + w.c} aria-label={w.t}>
-      {w.t.split('').map((ch, k) => (
-        <span key={k} className="swapch" style={{ animationDelay: (k * 0.3) + 's' }}>
-          {ch === ' ' ? ' ' : ch}</span>
-      ))}
-    </span>
-  );
+  return <span className={'swapword ' + (done ? 'latin' : 'greek')}>{text}</span>;
 }
 
 export default function Landing() {
@@ -50,7 +65,7 @@ export default function Landing() {
       <main>
         <section className="hero">
           <p className="eyebrow">KOL accountability, on Solana and Robinhood Chain</p>
-          <h1>Every call gets<br />a <ReceiptWord /></h1>
+          <h1>Every call gets<br />a <ScrambleWord /></h1>
           <p className="lede">
             Urdheim files memecoin calls made on X. Entry price frozen at the moment
             of the post, verdict when the chart speaks. No edits, no deletions,

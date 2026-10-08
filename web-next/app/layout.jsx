@@ -14,7 +14,7 @@ const NAV = [
   ['/how', 'Help', 'Help', Info],
 ];
 
-function Avatar() {
+function Avatar({ onHandle }) {
   // Signed-in photo from the profiles cache. Placeholder ring until then.
   const [img, setImg] = useState('');
   useEffect(() => {
@@ -24,19 +24,24 @@ function Avatar() {
         const me = await fetch(API_BASE + '/api/auth/me',
           { credentials: 'include', cache: 'no-store' }).then(r => r.json());
         if (!live || !me.handle) return;
+        if (onHandle) onHandle('/profile/' + encodeURIComponent(me.handle));
         const p = await fetch(API_BASE + '/api/profile/' +
           encodeURIComponent(me.handle), { cache: 'no-store' }).then(r => r.json());
         if (live && p.profile && p.profile.avatar) setImg(avatar(p.profile.avatar));
       } catch (e) { /* signed out: keep the ring */ }
     })();
     return () => { live = false; };
-  }, []);
+  }, [onHandle]);
   return (<span className="tabava">{img ? <img src={img} alt="" /> : <UserRound />}</span>);
 }
 
 export default function RootLayout({ children }) {
   const path = usePathname() || '/';
   const cur = path.replace(/\/+$/, '') || '/';
+  // Mine points straight at your profile once the handle resolves.
+  const [mine, setMine] = useState('/my');
+  const hrefFor = (href) => (href === '/my' ? mine : href);
+  const activeFor = (href) => (href === '/my' ? (cur === mine || cur === '/my') : cur === href);
   if (path === '/') return (
     <html lang="en">
       <body>{children}</body>
@@ -50,8 +55,8 @@ export default function RootLayout({ children }) {
             <Link href="/" className="brand">URDHEIM<small>SHILL RECEIPTS</small></Link>
             <div style={{ height: 18 }} />
             {NAV.map(([href, label, , I]) => (
-              <Link key={href} href={href}
-                className={'railnav' + (cur === href ? ' on' : '')}>
+              <Link key={href} href={hrefFor(href)}
+                className={'railnav' + (activeFor(href) ? ' on' : '')}>
                 <I />{label}</Link>
             ))}
           </aside>
@@ -62,8 +67,8 @@ export default function RootLayout({ children }) {
           {children}
           <nav className="mobiletabs">
             {NAV.map(([href, , short, I]) => (
-              <Link key={href} href={href} className={cur === href ? 'on' : ''}>
-                {href === '/my' ? <Avatar /> : <I />}{short}</Link>
+              <Link key={href} href={hrefFor(href)} className={activeFor(href) ? 'on' : ''}>
+                {href === '/my' ? <Avatar onHandle={setMine} /> : <I />}{short}</Link>
             ))}
           </nav>
         </div>

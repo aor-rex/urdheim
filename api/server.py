@@ -34,6 +34,48 @@ _hits: dict[str, list] = {}
 _RATE_LIMIT = int(os.environ.get("RATE_LIMIT", "60"))
 
 
+# Short server cache: repeat loads answer in ms. Snapshotter-grade
+# freshness (30-60s), never per-user data.
+_CACHE_TTL = (
+    ("/api/feed", 30), ("/api/leaderboard", 30), ("/api/stats", 30),
+    ("/api/profile/", 60),
+)
+_cache: dict[str, tuple] = {}
+
+
+def _cache_ttl(path: str) -> int:
+    for prefix, ttl in _CACHE_TTL:
+        if path.startswith(prefix):
+            return ttl
+    return 0
+
+
+@app.middleware("http")
+async def cache_gets(request: Request, call_next):
+    from fastapi.responses import Response
+    ttl = _cache_ttl(request.url.path)
+    if request.method != "GET" or not ttl:
+        return await call_next(request)
+    import time as _t
+    key = request.url.path + ("?" + request.url.query if request.url.query else "")
+    now = _t.monotonic()
+    hit = _cache.get(key)
+    if hit and now - hit[0] < ttl:
+        return Response(content=hit[1], media_type="application/json",
+                        headers={"X-Cache": "HIT"})
+    resp = await call_next(request)
+    if resp.status_code == 200:
+        body = b""
+        async for chunk in resp.body_iterator:
+            body += chunk
+        _cache[key] = (now, body)
+        if len(_cache) > 2000:
+            _cache.clear()
+        return Response(content=body, media_type="application/json",
+                        headers={"X-Cache": "MISS"})
+    return resp
+
+
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     if request.url.path.startswith("/api/") and request.method == "GET":
