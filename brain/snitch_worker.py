@@ -18,7 +18,7 @@ import psycopg  # noqa: E402
 from unyx import UnyxClient  # noqa: E402
 
 from brain.detective import classify, record_call  # noqa: E402
-from listener.mentions import enroll_caller  # noqa: E402
+from listener.mentions import enroll_caller, parse_raw_tweet  # noqa: E402
 from watcher.common import is_candidate  # noqa: E402
 
 POST_RE = re.compile(r"(?:x|twitter)\.com/\w+/status/(\d+)")
@@ -36,8 +36,15 @@ def fetch_post(client: UnyxClient, url: str) -> tuple[str, str, str] | None:
     if not tw:
         return None
     author = ((tw.get("author") or {}).get("screen_name")
-              or tw.get("screen_name") or "?")
-    return author, m.group(1), tw.get("text") or tw.get("full_text") or ""
+              or tw.get("screen_name"))
+    text = tw.get("text") or tw.get("full_text") or ""
+    if not author or not text:
+        # raw TweetResultByRestId blob: parse the real fields out of it
+        parsed = parse_raw_tweet(tw.get("raw", {}) if isinstance(tw, dict) else {})
+        if parsed:
+            author = author or parsed["author"]
+            text = text or parsed["text"]
+    return author or "?", m.group(1), text
 
 
 def process(limit: int = 20) -> dict:
