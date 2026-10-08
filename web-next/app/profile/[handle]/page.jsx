@@ -1,14 +1,21 @@
 'use client';
 import { use, useEffect, useState } from 'react';
-import { apiProfile, fmtAvg, fmtCount } from '../../../lib/api';
+import { useRouter } from 'next/navigation';
+import { apiProfile, fmtAvg, fmtCount, fetchMe, signOut } from '../../../lib/api';
 import { Avatar, Receipt, RailBox, RailRow, SignInBox, Medal, Link2, Share2, BadgeCheck } from '../../../lib/components';
+import { LogOut } from 'lucide-react';
 
 export default function Profile({ params }) {
   const { handle } = use(params);
+  const router = useRouter();
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
+  const [mine, setMine] = useState(false);
   useEffect(() => {
     apiProfile(handle).then(setData).catch((e) => setErr(String(e)));
+    fetchMe().then(m => {
+      if (m.handle && m.handle.toLowerCase() === String(handle).toLowerCase()) setMine(true);
+    }).catch(() => {});
   }, [handle]);
   if (err) return (
     <><div className="feedcol"><div style={{ padding: 40 }} className="sans">no record on @{handle} yet.</div></div>
@@ -36,6 +43,12 @@ export default function Profile({ params }) {
               <span><b style={{ color: '#e8e0cf', fontWeight: 400 }}>{fmtCount(p.followers)}</b> followers</span>
               <span><b style={{ color: '#e8e0cf', fontWeight: 400 }}>{fmtCount(p.following)}</b> following</span>
             </div>
+            {mine && (
+              <button
+                onClick={async () => { await signOut(); router.replace('/feed'); }}
+                className="sans"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, background: 'none', border: '1px solid #2b2519', borderRadius: 4, color: '#5a4f35', fontSize: 11, letterSpacing: 2, padding: '9px 14px', cursor: 'pointer' }}>
+                <LogOut size={13} />SIGN OUT</button>)}
           </div>
         </div>
         <div className="sans" style={{ display: 'flex', borderBottom: '1px solid #2b2519' }}>

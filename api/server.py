@@ -235,6 +235,13 @@ def auth_me(request: Request) -> dict:
     return {"handle": h}
 
 
+@app.post("/api/auth/logout")
+def auth_logout():
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie("urdheim_uid", path="/")
+    return resp
+
+
 def verify_turnstile(token: str) -> bool:
     secret = os.environ.get("TURNSTILE_SECRET", "")
     if not secret:

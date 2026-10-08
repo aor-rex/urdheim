@@ -28,6 +28,17 @@ export async function fetchMe() {
   return _me;
 }
 
+// Sign out everywhere: server clears the session cookie, local cache drops.
+export async function signOut() {
+  try {
+    await fetch(API_BASE + '/api/auth/logout',
+      { method: 'POST', credentials: 'include' });
+  } catch (e) { /* offline: clear locally anyway */ }
+  document.cookie = 'urdheim_uid=; Max-Age=0; path=/';
+  _me = { handle: null, profile: null };
+  _meAt = Date.now();
+}
+
 async function get(path) {
   const r = await fetch(BASE + path, { cache: 'no-store' });
   if (!r.ok) throw new Error(r.status + ' ' + path);
