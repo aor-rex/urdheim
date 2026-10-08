@@ -14,14 +14,38 @@ import httpx
 import psycopg  # noqa: E402
 from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
-from fastapi.responses import RedirectResponse  # noqa: E402
+from fastapi.responses import JSONResponse, RedirectResponse  # noqa: E402
 import base64
 import hashlib
 import hmac
 import secrets  # noqa: E402
+import time  # noqa: E402
 import urllib.parse  # noqa: E402
 
 app = FastAPI(title="urdheim-api")
+
+
+def _real_ip(request: Request) -> str:
+    return (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            or (request.client.host if request.client else "web"))
+
+
+_hits: dict[str, list] = {}
+_RATE_LIMIT = int(os.environ.get("RATE_LIMIT", "60"))
+
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    if request.url.path.startswith("/api/") and request.method == "GET":
+        now = time.monotonic()
+        hits = _hits.setdefault(_real_ip(request), [])
+        hits[:] = [t for t in hits if now - t < 60]
+        if len(hits) >= _RATE_LIMIT:
+            return JSONResponse({"detail": "slow down"}, status_code=429)
+        hits.append(now)
+        if len(_hits) > 5000:  # memory bound, single instance
+            _hits.clear()
+    return await call_next(request)
 _origins = [o.strip() for o in
             os.environ.get("CORS_ORIGINS",
                            "http://localhost:8092,http://127.0.0.1:8092").split(",")
@@ -186,8 +210,7 @@ def verify_turnstile(token: str) -> bool:
 def snitch(body: dict, request: Request) -> dict:
     url = (body.get("post_url") or "").strip()
     handle = (body.get("handle") or "").strip().lstrip("@")
-    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-          or (request.client.host if request.client else "web"))
+    ip = _real_ip(request)
     if not url.startswith("https://x.com/") and not url.startswith("https://twitter.com/"):
         raise HTTPException(400, "post link must be an x.com url")
     if not verify_turnstile(body.get("turnstile") or ""):
