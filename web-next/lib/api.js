@@ -34,7 +34,7 @@ export async function signOut() {
     await fetch(API_BASE + '/api/auth/logout',
       { method: 'POST', credentials: 'include' });
   } catch (e) { /* offline: clear locally anyway */ }
-  document.cookie = 'urdheim_uid=; Max-Age=0; path=/';
+  document.cookie = 'urdheim_sess=; Max-Age=0; path=/; Secure; SameSite=Lax';
   _me = { handle: null, profile: null };
   _meAt = Date.now();
 }

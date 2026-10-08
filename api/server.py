@@ -238,7 +238,7 @@ def auth_me(request: Request) -> dict:
 @app.post("/api/auth/logout")
 def auth_logout():
     resp = JSONResponse({"ok": True})
-    resp.delete_cookie("urdheim_uid", path="/")
+    resp.delete_cookie("urdheim_sess", path="/", secure=True, samesite="lax")
     return resp
 
 
