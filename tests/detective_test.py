@@ -6,7 +6,7 @@ import os
 import sys
 import types
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 os.environ["DB_URL"] = "postgresql://test/test@localhost/test"
 os.environ["QUEUE_PATH"] = "/tmp/urdheim-test-queue.jsonl"
@@ -40,7 +40,7 @@ m = types.ModuleType("psycopg")
 m.connect = lambda *a, **k: FakeConn()
 sys.modules["psycopg"] = m
 
-import detective
+from brain import detective
 
 detective.classify = lambda author, text: dict(
     VERDICTS["9001"] if "apeing" in text else VERDICTS["9003"])
