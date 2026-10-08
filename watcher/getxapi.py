@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import httpx
 
-from brain.budget import allow, log
+from brain.budget import allow, log, BudgetStop
 
 API = "https://api.getxapi.com"
 
@@ -27,7 +27,7 @@ def headers() -> dict:
 def _guarded(endpoint: str):
     ok, reason = allow(endpoint)
     if not ok:
-        raise SystemExit(f"budget stop: {reason}")
+        raise BudgetStop(f"budget stop: {reason}")
 
 
 def add_monitor(handle: str, webhook_url: str, tier: str = "fast",

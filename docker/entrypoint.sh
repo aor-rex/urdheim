@@ -30,13 +30,22 @@ from watcher.getxapi import backfill
 from watcher.common import is_candidate, queue_candidate
 from listener.mentions import load_seeds
 from brain.detective import classify, record_call
+from brain.budget import BudgetStop
 import json, os
 donep = os.environ.get("DONE_PATH", "/tmp/q.done")
 qp = os.environ.get("QUEUE_PATH", "/tmp/q.jsonl")
 done = set(open(donep).read().split()) if os.path.exists(donep) else set()
 with open(donep, "a") as df:
     for h in load_seeds():
-        for t in backfill(h)[0]:
+        try:
+            tweets = backfill(h)[0]
+        except BudgetStop as e:
+            print(f"poll stop @{h}: {e} (sleeping till next round)", flush=True)
+            break
+        except Exception as e:
+            print(f"poll skip @{h}: {str(e)[:120]}", flush=True)
+            continue
+        for t in tweets:
             if not is_candidate(t.get("text") or ""):
                 continue
             queue_candidate(qp, h, str(t["id"]), t["text"] or "")
@@ -47,10 +56,20 @@ with open(donep, "a") as df:
             continue
         done.add(pid)
         df.write(pid + "\n"); df.flush()
-        v = classify(item["author"], item["text"])
+        try:
+            v = classify(item["author"], item["text"])
+        except BudgetStop as e:
+            print(f"classify stop: {e} (sleeping till next round)", flush=True)
+            break
+        except Exception as e:
+            print(f"classify skip {pid}: {str(e)[:120]}", flush=True)
+            continue
         print(item["author"], (item.get("mint") or "")[:14], "->", v["verdict"], flush=True)
         if v["verdict"] == "call":
-            record_call(item, v)
+            try:
+                record_call(item, v)
+            except Exception as e:
+                print(f"record skip {pid}: {str(e)[:120]}", flush=True)
 print("poll done", flush=True)
 EOF
       python brain/snitch_worker.py --limit 20

@@ -60,7 +60,18 @@ def process(limit: int = 20) -> dict:
                 out["rejected"] += 1
                 continue
             author, post_id, text = got
-            v = classify(author, text)
+            try:
+                v = classify(author, text)
+            except Exception as e:
+                from brain.budget import BudgetStop
+                if isinstance(e, BudgetStop):
+                    print(f"snitch stop: {e} (next round picks it up)")
+                    break
+                cur.execute("UPDATE submissions SET status='rejected' WHERE id=%s",
+                            (sid,))
+                out["rejected"] += 1
+                print(f"snitch skip {sid}: {str(e)[:120]}")
+                continue
             if v.get("verdict") != "call":
                 cur.execute("UPDATE submissions SET status='rejected' WHERE id=%s",
                             (sid,))

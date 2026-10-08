@@ -20,6 +20,7 @@ from watcher.getxapi import backfill
 from watcher.common import is_candidate, queue_candidate
 from listener.mentions import load_seeds
 from brain.detective import classify, record_call
+from brain.budget import BudgetStop
 import json
 import os
 from unyx import UnyxClient
@@ -37,7 +38,15 @@ except Exception:
 done = set(open(donep).read().split()) if os.path.exists(donep) else set()
 n_q = 0
 for h in load_seeds():
-    for t in backfill(h)[0]:
+    try:
+        tweets = backfill(h)[0]
+    except BudgetStop as e:
+        print(f"poll stop @{h}: {e}", flush=True)
+        break
+    except Exception as e:
+        print(f"poll skip @{h}: {str(e)[:120]}", flush=True)
+        continue
+    for t in tweets:
         if str(t["id"]) in queued:
             continue
         if is_candidate(t.get("text") or ""):
@@ -51,12 +60,23 @@ with open(donep, "a") as df:
         if pid in done:
             continue
         done.add(pid)
-        v = classify(item["author"], item["text"])
+        try:
+            v = classify(item["author"], item["text"])
+        except BudgetStop as e:
+            print(f"classify stop: {e}", flush=True)
+            break
+        except Exception as e:
+            print(f"classify skip {pid}: {str(e)[:120]}", flush=True)
+            df.write(pid + "\n"); df.flush()
+            continue
         df.write(pid + "\n"); df.flush()
     print(item["author"], item["mint"][:14], "->", v["verdict"], v["confidence"], flush=True)
     if v["verdict"] == "call":
         item["client"] = _ux
-        record_call(item, v); n_r += 1
+        try:
+            record_call(item, v); n_r += 1
+        except Exception as e:
+            print(f"record skip {pid}: {str(e)[:120]}", flush=True)
 print(f"poll done: queued={n_q} recorded={n_r}", flush=True)
 EOF
   tail -3 "$ROOT/log/poll.log"
