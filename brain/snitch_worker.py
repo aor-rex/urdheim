@@ -97,8 +97,9 @@ def process(limit: int = 20) -> dict:
             # Fires on the 3rd (enroll_caller dedupes after that).
             nominated = (suggested or "").split(":")[0] or author
             cur.execute("""SELECT COUNT(*) FROM submissions
-                           WHERE suggested_caller = %s AND status = 'accepted'""",
-                        (suggested,))
+                           WHERE split_part(suggested_caller, ':', 1) = %s
+                           AND status = 'accepted'""",
+                        (nominated,))
             if (cur.fetchone()[0] or 0) == 3:
                 out["enrolled"].append(nominated)
                 print(enroll_caller(nominated))
