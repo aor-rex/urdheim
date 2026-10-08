@@ -53,7 +53,7 @@ async def hook(request: Request, x_signature: str = Header(default="")):
     import json
 
     n = handle_delivery(json.loads(raw),
-                        os.environ.get("QUEUE_PATH", "watcher/queue.jsonl"))
+                        os.environ.get("QUEUE_PATH", "/tmp/q.jsonl"))
     return {"ok": True, "queued": n}
 
 
