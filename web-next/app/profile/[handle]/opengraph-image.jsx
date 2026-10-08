@@ -32,8 +32,8 @@ async function avatar(url) {
 function Stat({ v, label, color }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontSize: 64, color: color || CREAM }}>{v}</div>
-      <div style={{ fontSize: 19, letterSpacing: 5, color: DIM,
+      <div style={{ fontSize: 52, color: color || CREAM }}>{v}</div>
+      <div style={{ fontSize: 17, letterSpacing: 5, color: DIM,
         fontFamily: 'Verdana, sans-serif', marginTop: 6 }}>{label}</div>
     </div>);
 }
@@ -69,21 +69,24 @@ export default async function Og({ params }) {
       <div style={{ fontSize: 22, letterSpacing: 12, color: DIM,
         fontFamily: 'Verdana, sans-serif', paddingLeft: 12 }}>
         URDHEIM · PUBLIC RECORD</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 44, marginTop: 34 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 36,
+        marginTop: 34, maxWidth: 1104 }}>
         {pic
-          ? <img src={pic} width={150} height={150}
+          ? <img src={pic} width={120} height={120}
               style={{ borderRadius: '50%', border: `4px solid ${GOLD}` }} />
-          : <div style={{ width: 150, height: 150, borderRadius: '50%',
+          : <div style={{ width: 120, height: 120, borderRadius: '50%',
               border: `4px solid ${GOLD}`, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 64, color: GOLD }}>
+              justifyContent: 'center', fontSize: 52, color: GOLD, flex: 'none' }}>
               {h.slice(0, 1).toUpperCase()}</div>}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 72, fontStyle: 'italic' }}>{name}</div>
-          <div style={{ fontSize: 28, color: FAINT,
-            fontFamily: 'Verdana, sans-serif', marginTop: 6 }}>@{h}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 450,
+          overflow: 'hidden' }}>
+          <div style={{ fontSize: 50, fontStyle: 'italic', whiteSpace: 'nowrap',
+            overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+          <div style={{ fontSize: 24, color: FAINT,
+            fontFamily: 'Verdana, sans-serif', marginTop: 6 }}>{'@' + h}</div>
         </div>
-        <div style={{ width: 2, height: 170, background: '#2b2519', margin: '0 8px' }} />
-        <div style={{ display: 'flex', gap: 54 }}>
+        <div style={{ width: 2, height: 150, background: '#2b2519', flex: 'none' }} />
+        <div style={{ display: 'flex', gap: 44, flex: 'none' }}>
           <Stat v={filed} label="FILED" />
           <Stat v={scored} label="SCORED" />
           <Stat v={(avg > 0 ? '+' : '') + avg + '%'} label="AVG RETURN" color={avgC} />
