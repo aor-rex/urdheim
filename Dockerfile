@@ -11,7 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists \
     && pip install --no-cache-dir -r requirements.txt
 
-COPY api brain watcher listener poster receiver schema.sql migrate.sql ./
+COPY api ./api
+COPY brain ./brain
+COPY watcher ./watcher
+COPY listener ./listener
+COPY poster ./poster
+COPY receiver ./receiver
+COPY schema.sql migrate.sql ./
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
