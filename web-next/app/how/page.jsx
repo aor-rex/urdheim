@@ -12,7 +12,7 @@ export default function How() {
     <>
       <div className="feedcol">
         <div className="fhead">
-          <h1>How it works</h1>
+          <h1>Help</h1>
           <div className="sub">Four steps between a shill and a verdict.</div>
         </div>
         <div style={{ padding: '8px 28px 0' }}>

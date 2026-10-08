@@ -428,7 +428,10 @@ def leaderboard() -> dict:
         for r in cur.fetchall():
             c = shape_call(dict(zip(cols, r)))
             by_caller.setdefault(c["handle"], []).append(c)
-        scored = [(h, score(by_caller.get(h, []))) for h in handles]
+        scored = [(h, score(by_caller.get(h, []))) for h in handles
+                 if by_caller.get(h)]
+        if not scored:
+            return {"callers": []}
         scored.sort(key=lambda t: (t[1]["avg"], t[1]["green"]), reverse=True)
         rows = []
         for i, (h, _) in enumerate(scored, 1):
