@@ -1,5 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
-  <circle cx="48" cy="48" r="44" stroke="#c9a227" stroke-width="3"/>
-  <circle cx="48" cy="48" r="37" stroke="#c9a227" stroke-width="1" opacity="0.45"/>
-  <path d="M36 26 V70 M36 30 L62 48 V72" stroke="#c9a227" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <g id="key" transform="translate(48 8)">
+      <path d="M-5 5 H5 V-5 H-2 V2 H2" stroke="#c9a227" stroke-width="2.2" stroke-linecap="square"/>
+    </g>
+  </defs>
+  <circle cx="48" cy="48" r="45" stroke="#c9a227" stroke-width="1.5" opacity="0.7"/>
+    <use href="#key" transform="rotate(0.000 48 48)"/>
+  <use href="#key" transform="rotate(12.857 48 48)"/>
+  <use href="#key" transform="rotate(25.714 48 48)"/>
+  <use href="#key" transform="rotate(38.571 48 48)"/>
+  <use href="#key" transform="rotate(51.429 48 48)"/>
+  <use href="#key" transform="rotate(64.286 48 48)"/>
+  <use href="#key" transform="rotate(77.143 48 48)"/>
+  <use href="#key" transform="rotate(90.000 48 48)"/>
+  <use href="#key" transform="rotate(102.857 48 48)"/>
+  <use href="#key" transform="rotate(115.714 48 48)"/>
+  <use href="#key" transform="rotate(128.571 48 48)"/>
+  <use href="#key" transform="rotate(141.429 48 48)"/>
+  <use href="#key" transform="rotate(154.286 48 48)"/>
+  <use href="#key" transform="rotate(167.143 48 48)"/>
+  <use href="#key" transform="rotate(180.000 48 48)"/>
+  <use href="#key" transform="rotate(192.857 48 48)"/>
+  <use href="#key" transform="rotate(205.714 48 48)"/>
+  <use href="#key" transform="rotate(218.571 48 48)"/>
+  <use href="#key" transform="rotate(231.429 48 48)"/>
+  <use href="#key" transform="rotate(244.286 48 48)"/>
+  <use href="#key" transform="rotate(257.143 48 48)"/>
+  <use href="#key" transform="rotate(270.000 48 48)"/>
+  <use href="#key" transform="rotate(282.857 48 48)"/>
+  <use href="#key" transform="rotate(295.714 48 48)"/>
+  <use href="#key" transform="rotate(308.571 48 48)"/>
+  <use href="#key" transform="rotate(321.429 48 48)"/>
+  <use href="#key" transform="rotate(334.286 48 48)"/>
+  <use href="#key" transform="rotate(347.143 48 48)"/>
+  <circle cx="48" cy="48" r="31" stroke="#c9a227" stroke-width="1" opacity="0.45"/>
+  <path d="M38 32 V64 M38 35 L60 48 V66" stroke="#c9a227" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
