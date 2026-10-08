@@ -33,7 +33,7 @@ footer a{color:#8a7f63;text-decoration:none}
 .siderail{padding:28px 22px;position:sticky;top:0;height:100vh;overflow-y:auto}
 @media (max-width:1000px){.shell{grid-template-columns:minmax(0,1fr)}.rail,.siderail{display:none}.appfoot{grid-column:1/-1}.feedcol{border-right:none;padding-bottom:90px}}
 a{color:#c9a227}
-.mobilebar{display:none;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #2b2519;position:sticky;top:0;background:#0c0a08;z-index:10}
+.mobilebar{display:none;align-items:center;justify-content:space-between;padding:10px 14px;margin:12px 14px 0;border:1px solid #2b2519;border-radius:12px;background:#12100c;position:sticky;top:12px;z-index:10}
 .mobilebar .brand{font-size:14px;letter-spacing:4px;color:#f2ead6;text-decoration:none;display:flex;align-items:center;gap:8px}
 .footbrand{display:inline-flex;align-items:center;gap:10px}
 .mobilebar .in{font-family:Verdana,sans-serif;font-size:10px;letter-spacing:2px;color:#c9a227;border:1px solid #c9a227;border-radius:3px;padding:6px 10px;text-decoration:none;white-space:nowrap;flex:none}
