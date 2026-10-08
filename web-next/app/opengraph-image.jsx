@@ -20,10 +20,11 @@ async function font(name) {
 }
 
 export default async function Og() {
-  const [logo, reg, ita] = await Promise.all([
+  const [logo, reg, ita, sans] = await Promise.all([
     asset('logo-og.png'),
     font('Gelasio-Regular.ttf'),
     font('Gelasio-Italic.ttf'),
+    font('LiberationSans-Regular.ttf'),
   ]);
   return new ImageResponse(
     <div style={{
@@ -46,6 +47,7 @@ export default async function Og() {
       fonts: [
         { name: 'Georgia', data: reg, style: 'normal', weight: 400 },
         { name: 'Georgia', data: ita, style: 'italic', weight: 400 },
+        { name: 'Verdana', data: sans, style: 'normal', weight: 400 },
       ],
     });
 }
