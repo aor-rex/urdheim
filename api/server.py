@@ -255,8 +255,9 @@ def profile(handle: str) -> dict:
             receipts.append(shape_receipt(c, people))
         filed = sum(1 for r in raws
                     if (r.get("filer_handle") or r["handle"]) == handle)
-        scored = [r["mult"] for r in receipts if r["mult"] is not None]
-        avg = (sum((m - 1) * 100 for m in scored) / len(scored)) if scored else 0
+        scored = sorted(r["mult"] for r in receipts if r["mult"] is not None)
+        med = scored[len(scored) // 2] if scored else None
+        avg = round((med - 1) * 100) if med else 0
     return {"profile": people[handle], "stats": {
         "filed": filed, "verified": len(scored), "avg": round(avg),
         "scored": len(scored)}, "receipts": receipts}
