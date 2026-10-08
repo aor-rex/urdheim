@@ -5,7 +5,7 @@ export default function SignIn({ searchParams }) {
   const failed = searchParams && searchParams.err;
   return (
     <div style={{
-      gridColumn: '1 / -1', display: 'flex',
+      gridColumn: '2 / -1', gridRow: '1', display: 'flex',
       justifyContent: 'center', padding: '48px 24px 0',
     }}>
       <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
