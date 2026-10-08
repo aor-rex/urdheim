@@ -17,9 +17,10 @@ async function font(name) {
 }
 
 // X avatar -> data URI so the card never depends on hotlinking.
-async function avatar(url, fallback) {
+async function avatar(url) {
   try {
-    const r = await fetch(url.replace('_normal.', '_400x400.'));
+    const r = await fetch(url.replace('_normal.', '_400x400.'),
+      { signal: AbortSignal.timeout(7000) });
     if (!r.ok) throw new Error('no pic');
     const b = Buffer.from(await r.arrayBuffer());
     return `data:image/jpeg;base64,${b.toString('base64')}`;
@@ -44,11 +45,11 @@ export default async function Og({ params }) {
   let s = null;
   try {
     const r = await fetch(API + '/api/profile/' + encodeURIComponent(h),
-      { next: { revalidate: 60 } });
+      { next: { revalidate: 60 }, signal: AbortSignal.timeout(7000) });
     if (r.ok) ({ profile: p, stats: s } = await r.json());
   } catch (e) { /* fallback card below */ }
   const name = (p && p.name) || ('@' + h);
-  const pic = p && p.avatar ? await avatar(p.avatar, h) : null;
+  const pic = p && p.avatar ? await avatar(p.avatar) : null;
   const filed = (s && s.filed) || 0;
   const scored = (s && s.scored) || 0;
   const avg = (s && s.avg) || 0;
