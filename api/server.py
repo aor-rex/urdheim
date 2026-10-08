@@ -269,10 +269,27 @@ def leaderboard() -> dict:
         cur.execute("SELECT handle FROM callers ORDER BY added_at")
         handles = [r[0] for r in cur.fetchall()]
         people = profile_map(cur, set(handles))
+        if not handles:
+            return {"callers": []}
+        cur.execute("""
+            SELECT c.coin, c.mint, c.chain, h.handle, c.price_at_call,
+                   c.called_at, c.post_url, c.filer_handle, c.filed_via,
+                   c.likes, c.reposts, c.quotes, c.views,
+                   c.peak, c.peak_x, c.state,
+                   (SELECT s.price FROM snapshots s
+                     WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
+            FROM calls c JOIN callers h ON h.id = c.caller_id
+            ORDER BY c.called_at DESC""")
+        cols = [d[0] for d in cur.description]
+        by_caller: dict[str, list[dict]] = {h: [] for h in handles}
+        for r in cur.fetchall():
+            c = shape_call(dict(zip(cols, r)))
+            by_caller.setdefault(c["handle"], []).append(c)
+        scored = [(h, score(by_caller.get(h, []))) for h in handles]
+        scored.sort(key=lambda t: (t[1]["avg"], t[1]["green"]), reverse=True)
         rows = []
-        for i, h in enumerate(handles, 1):
-            calls = fetch_calls(cur, "h.handle = %s", h)
-            row = caller_row(h, calls, str(i))
+        for i, (h, _) in enumerate(scored, 1):
+            row = caller_row(h, by_caller.get(h, []), str(i))
             row["profile"] = people.get(h, {"handle": h})
             rows.append(row)
     return {"callers": rows}
