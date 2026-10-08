@@ -2,9 +2,9 @@
 # Dokploy: set NEXT_PUBLIC_API to the api service URL at build time.
 FROM node:26-slim AS build
 WORKDIR /web
-COPY web-next/package*.json ./
+COPY package*.json ./
 RUN npm install
-COPY web-next/ ./
+COPY . ./
 ARG NEXT_PUBLIC_API=http://localhost:8091
 ENV NEXT_PUBLIC_API=$NEXT_PUBLIC_API
 RUN npm run build
