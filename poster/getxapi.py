@@ -50,10 +50,12 @@ def post(text: str, cookies_path: str, dry: bool = False) -> dict:
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     dry = "--dry" in sys.argv
-    cookies = "/opt/data/projects/uny-x/cookies.json"
+    cookies = ""
     for a in sys.argv[1:]:
         if a.startswith("--cookies="):
             cookies = a.split("=", 1)[1]
+    if not cookies:
+        raise SystemExit("set --cookies=PATH (cookie-editor JSON export)")
     if not args and not dry:
         raise SystemExit('usage: getxapi.py "text" [--cookies PATH] [--dry]')
     out = post(args[0] if args else "", cookies, dry)

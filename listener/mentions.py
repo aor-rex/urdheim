@@ -29,12 +29,14 @@ SELF = os.environ.get("LISTENER_SELF", "urdheim").lower()
 
 
 def client() -> UnyxClient:
-    """One session per poll batch. Explicit cookies path wins, UNYX_COOKIES
-    env next, ./cookies.json fallback (handled inside uny-x)."""
+    """One session per poll batch. LISTENER_COOKIES wins, UNYX_COOKIES
+    next. No local default: in containers the dev-box path doesn't exist."""
     c = UnyxClient()
-    cookies = os.environ.get("LISTENER_COOKIES", "")
-    if not c.login_from_cookies(cookies or os.environ.get("UNYX_COOKIES", "") or
-                                "/opt/data/projects/uny-x/cookies.json"):
+    cookies = os.environ.get("LISTENER_COOKIES", "") or os.environ.get(
+        "UNYX_COOKIES", "")
+    if not cookies:
+        raise SystemExit("listener: no cookies — set LISTENER_COOKIES to a file")
+    if not c.login_from_cookies(cookies):
         raise SystemExit("listener: cookie login failed")
     return c
 
@@ -206,8 +208,10 @@ def send_reply(post_id: str, text: str, dry: bool = False) -> dict:
     except Exception as e:
         # fallback: GetXAPI reply (budget-guarded, $0.002)
         from poster.getxapi import post as gx_post  # type: ignore
-        out = gx_post(text, os.environ.get("LISTENER_COOKIES",
-                      "/opt/data/projects/uny-x/cookies.json"))
+        cookies = os.environ.get("LISTENER_COOKIES", "")
+        if not cookies:
+            raise SystemExit("listener: no cookies for getxapi fallback either")
+        out = gx_post(text, cookies)
         return {"via": f"getxapi-fallback (uny-x: {str(e)[:100]})",
                 "out": out}
 
