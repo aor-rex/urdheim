@@ -27,8 +27,8 @@ _ux = UnyxClient()
 _ck = os.environ.get("LISTENER_COOKIES") or os.environ.get("POSTER_COOKIES") or ""
 if _ck:
     _ux.login_from_cookies(_ck)
-qp = "/tmp/q.jsonl"
-donep = "/tmp/q.done"
+qp = os.environ.get("QUEUE_PATH", "/tmp/q.jsonl")
+donep = os.environ.get("DONE_PATH", "/tmp/q.done")
 queued = set()
 try:
     queued = {json.loads(l).get("post_id") for l in open(qp)}

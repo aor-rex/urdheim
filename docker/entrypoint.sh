@@ -31,15 +31,16 @@ from watcher.common import is_candidate, queue_candidate
 from listener.mentions import load_seeds
 from brain.detective import classify, record_call
 import json, os
-donep = "/tmp/q.done"
+donep = os.environ.get("DONE_PATH", "/tmp/q.done")
+qp = os.environ.get("QUEUE_PATH", "/tmp/q.jsonl")
 done = set(open(donep).read().split()) if os.path.exists(donep) else set()
 with open(donep, "a") as df:
     for h in load_seeds():
         for t in backfill(h)[0]:
             if not is_candidate(t.get("text") or ""):
                 continue
-            queue_candidate("/tmp/q.jsonl", h, str(t["id"]), t["text"] or "")
-    for line in open("/tmp/q.jsonl"):
+            queue_candidate(qp, h, str(t["id"]), t["text"] or "")
+    for line in open(qp):
         item = json.loads(line)
         pid = str(item.get("post_id"))
         if pid in done:

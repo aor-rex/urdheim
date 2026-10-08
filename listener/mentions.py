@@ -42,7 +42,8 @@ def client() -> UnyxClient:
 
 
 def seen_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "seen.json")
+    return os.environ.get("SEEN_PATH",
+                          os.path.join(os.path.dirname(__file__), "seen.json"))
 
 
 def load_seen() -> set:
