@@ -17,14 +17,14 @@ export default function My() {
       <div className="feedcol">
         <div className="fhead">
           <h1>My receipts</h1>
-          <div className="sub">Your filings, your record. Sign in to claim it.</div>
+          <div className="sub">Your filings, under your name.</div>
         </div>
         <div style={{ padding: 40, maxWidth: 560 }}>
           {!done && <p style={{ fontSize: 16, color: '#5a4f35' }}>Checking…</p>}
           {done && handle && (
             <>
               <p style={{ fontSize: 16, color: '#9a8c6c', lineHeight: 1.7 }}>
-                Signed in as <span className="gold">@{handle}</span>. Your public record lives here:</p>
+                Signed in as <span className="gold">@{handle}</span>.</p>
               <p style={{ marginTop: 14 }}>
                 <Link href={'/profile/' + encodeURIComponent(handle)}>
                   View my public profile</Link></p>
@@ -33,7 +33,8 @@ export default function My() {
           {done && !handle && (
             <>
               <p style={{ fontSize: 16, color: '#9a8c6c', lineHeight: 1.7 }}>
-                Nobody is signed in on this browser.</p>
+                Nobody is signed in on this browser. Sign in and your filings
+                land under your name.</p>
               <p style={{ marginTop: 14 }}>
                 <Link href="/signin">Sign in with X</Link></p>
             </>
