@@ -35,9 +35,9 @@ def client() -> UnyxClient:
     cookies = os.environ.get("LISTENER_COOKIES", "") or os.environ.get(
         "UNYX_COOKIES", "")
     if not cookies:
-        raise SystemExit("listener: no cookies — set LISTENER_COOKIES to a file")
+        raise RuntimeError("listener: no cookies — set LISTENER_COOKIES to a file")
     if not c.login_from_cookies(cookies):
-        raise SystemExit("listener: cookie login failed")
+        raise RuntimeError("listener: cookie login failed")
     return c
 
 
@@ -216,7 +216,7 @@ def send_reply(post_id: str, text: str, dry: bool = False) -> dict:
         from poster.getxapi import post as gx_post  # type: ignore
         cookies = os.environ.get("LISTENER_COOKIES", "")
         if not cookies:
-            raise SystemExit("listener: no cookies for getxapi fallback either")
+            raise RuntimeError("listener: no cookies for getxapi fallback either")
         out = gx_post(text, cookies)
         return {"via": f"getxapi-fallback (uny-x: {str(e)[:100]})",
                 "out": out}
@@ -236,7 +236,11 @@ def run_once(dry: bool = False, test: str = "") -> None:
         if m["id"] in seen or not m["id"]:
             continue
         seen.add(m["id"])
-        reply = execute(m["author"], m["text"], conn, m["id"])
+        try:
+            reply = execute(m["author"], m["text"], conn, m["id"])
+        except Exception as e:
+            print(f"mention skip @{m['author']}: {str(e)[:120]}")
+            continue
         if not reply:
             print(f"ignore @{m['author']}: {(m['text'] or '')[:60]}")
             continue
