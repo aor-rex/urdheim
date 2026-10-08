@@ -60,9 +60,48 @@ def save_seen(ids: set) -> None:
     json.dump(sorted(ids), open(seen_path(), "w"))
 
 
-def fetch_mentions(n: int = 20) -> list[dict]:
+def parse_raw_tweet(raw: dict) -> dict | None:
+    """Pull (id, author, text, reply_to) out of a TweetResultByRestId blob."""
+    try:
+        res = (raw.get("data", {}).get("tweetResult", {}).get("result", {})
+               or raw.get("result", {}))
+        if res.get("__typename") == "TweetWithVisibilityResults":
+            res = res.get("tweet", {})
+        leg = res.get("legacy", {})
+        user = (res.get("core", {}).get("user_results", {}).get("result", {}))
+        uleg = user.get("legacy", {})
+        text = leg.get("full_text", "") or ""
+        if not text and not leg.get("id_str"):
+            return None
+        return {"id": leg.get("id_str") or res.get("rest_id", ""),
+                "author": uleg.get("screen_name", "") or "?",
+                "text": text,
+                "reply_to": leg.get("in_reply_to_status_id_str", "") or ""}
+    except (KeyError, TypeError, AttributeError):
+        return None
+
+
+def parent_context(c, mention_id: str) -> dict | None:
+    """Bare 'track this' -> the post it replies to (author + text). Free reads."""
+    try:
+        m = parse_raw_tweet(c.read(mention_id).get("raw", {}))
+    except Exception:
+        return None
+    if not m or not m["reply_to"]:
+        return None
+    try:
+        p = parse_raw_tweet(c.read(m["reply_to"]).get("raw", {}))
+    except Exception:
+        return None
+    return p
+
+
+def fetch_mentions(n: int = 20, c=None) -> list[dict]:
     """uny-x mentions -> normalized list. Free, cookie session."""
-    with client() as c:
+    if c is None:
+        with client() as fresh:
+            data = fresh.mentions(n)
+    else:
         data = c.mentions(n)
     items = []
     for m in data.get("mentions", []):
@@ -185,7 +224,8 @@ def enroll_call(conn, author: str, mint: str, post_id: str) -> str:
     return f"logged — watching {short}. receipt follows once the call resolves."
 
 
-def execute(author: str, text: str, conn, post_id: str = "") -> str | None:
+def execute(author: str, text: str, conn, post_id: str = "",
+              c=None) -> str | None:
     """Brain intent -> action. Returns reply text or None (silence)."""
     intent = classify_mention(author, text)
     kind, handle, mint = intent["intent"], intent["handle"], intent["mint"]
@@ -202,6 +242,15 @@ def execute(author: str, text: str, conn, post_id: str = "") -> str | None:
         return enroll_caller(handle) if handle else None
     if kind == "track_call":
         m = mint or next(iter(CA_RE.findall(text or "")), "")
+        if not m and c is not None and post_id and post_id != "test-mode-no-id":
+            parent = parent_context(c, post_id)
+            if parent:
+                m = next(iter(CA_RE.findall(parent["text"] or "")), "")
+                if m:
+                    return enroll_call(conn, parent["author"], m,
+                                       parent["id"])
+            return ("can't tell which call you mean — "
+                    "reply with the CA and i'll log it.")
         return enroll_call(conn, author, m, post_id) if m else None
     return None
 
@@ -239,7 +288,14 @@ def run_once(dry: bool = False, test: str = "") -> None:
             continue
         seen.add(m["id"])
         try:
-            reply = execute(m["author"], m["text"], conn, m["id"])
+            # bare "track this" needs the parent post: open a session so
+            # execute() can read it. everything else stays session-free.
+            if ("track" in (m["text"] or "").lower()
+                    and not CA_RE.search(m["text"] or "")):
+                with client() as c:
+                    reply = execute(m["author"], m["text"], conn, m["id"], c)
+            else:
+                reply = execute(m["author"], m["text"], conn, m["id"])
         except Exception as e:
             print(f"mention skip @{m['author']}: {str(e)[:120]}")
             continue
