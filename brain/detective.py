@@ -108,7 +108,7 @@ def record_call(item: dict, verdict: dict) -> None:
 
 
 def main():
-    queue = os.environ.get("QUEUE_PATH", "watcher/queue.jsonl")
+    queue = os.environ.get("QUEUE_PATH", "/tmp/q.jsonl")
     with open(queue) as f:
         for line in f:
             item = json.loads(line)
