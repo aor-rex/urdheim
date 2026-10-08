@@ -7,6 +7,13 @@ CREATE TABLE IF NOT EXISTS callers (
   -- no tiers: the stream covers every caller in real time, equally
 );
 
+CREATE TABLE IF NOT EXISTS watched (
+  handle   TEXT PRIMARY KEY,
+  source   TEXT NOT NULL DEFAULT 'seed',   -- seed | enroll | snitch
+  active   BOOLEAN NOT NULL DEFAULT TRUE,
+  added_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS calls (
   id            SERIAL PRIMARY KEY,
   caller_id     INT REFERENCES callers(id),

@@ -23,7 +23,19 @@ CREATE INDEX IF NOT EXISTS idx_calls_filer ON calls(filer_handle);
 -- submissions: who tagged it in
 ALTER TABLE submissions ADD COLUMN IF NOT EXISTS filer_handle TEXT;
 
--- snapshotter: peak tracking + state machine (open|vindicated|condemned|rugged).
+-- watchlist: who the poll loop backfills. enroll writes here, poll reads here.
+-- no json file: add/remove handles without touching the repo.
+CREATE TABLE IF NOT EXISTS watched (
+  handle   TEXT PRIMARY KEY,
+  source   TEXT NOT NULL DEFAULT 'seed',   -- seed | enroll | snitch
+  active   BOOLEAN NOT NULL DEFAULT TRUE,
+  added_at TIMESTAMPTZ DEFAULT now()
+);
+INSERT INTO watched (handle, source) VALUES
+  ('degenreck', 'seed'),
+  ('devvaintnohobby', 'seed'),
+  ('Tally__DE', 'seed')
+ON CONFLICT (handle) DO NOTHING;
 -- peak_x decides receipts + leaderboard (median, never best). state decides seals.
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS peak DOUBLE PRECISION;
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS peak_at TIMESTAMPTZ;

@@ -3,7 +3,7 @@
 Reads a snitched post (free via uny-x), runs the detective, and either
 records the call (accepted) or bins it (rejected). Three accepted
 nominations for an untracked handle enroll it on the watchlist
-(watcher/seed.json) — then the normal poll backfills its history.
+(watched table) — then the normal poll backfills its history.
 
 Run one-shot: .venv/bin/python brain/snitch_worker.py [--limit 20]
 Env: DB_URL, LISTENER_COOKIES (read path, free), OPENCODE_* (verdicts).

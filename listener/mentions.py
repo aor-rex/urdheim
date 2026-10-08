@@ -5,7 +5,7 @@ brain/intent.py (model reads conversation, returns structured intent);
 this file only executes: receipts, track enrollment, or silence.
 Reply path: `unyx reply` free first, GetXAPI $0.002 fallback (budget-guarded).
 Seen ids in listener/seen.json — restarts never double-reply.
-Track enrollments land in watcher/seed.json (callers) + submissions table.
+Track enrollments land in the watched table (callers) + submissions table.
 
 Usage:
   mentions.py --once [--dry] [--test "@user check <mint>"]
@@ -132,31 +132,36 @@ def caller_file(conn, handle: str) -> str | None:
             + f" · full file: urdheim/profile/{handle}")
 
 
-def seed_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "..", "watcher", "seed.json")
-
-
 def load_seeds() -> list[str]:
-    p = seed_path()
-    if os.path.exists(p):
-        try:
-            data = json.load(open(p))
-            items = data.get("handles", data) if isinstance(data, dict) else data
-            return [h.get("handle", h) if isinstance(h, dict) else h
-                    for h in items]
-        except Exception:
-            pass
+    """Watchlist from the watched table. DB down → the 3 defaults, never a file."""
+    try:
+        conn = db()
+        if conn is None:
+            return ["degenreck", "devvaintnohobby", "Tally__DE"]
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT handle FROM watched WHERE active ORDER BY added_at")
+            rows = [r[0] for r in cur.fetchall()]
+            if rows:
+                return rows
+    except Exception:
+        pass
     return ["degenreck", "devvaintnohobby", "Tally__DE"]
 
 
 def enroll_caller(handle: str) -> str:
-    """track_caller executor: append to seed.json (next poll backfills)."""
-    p = seed_path()
-    seeds = load_seeds()
-    if handle.lower() in [h.lower() for h in seeds]:
-        return f"@{handle} is already tracked — file: urdheim/profile/{handle}"
-    seeds.append(handle)
-    json.dump([{"handle": h} for h in seeds], open(p, "w"), indent=2)
+    """track_caller executor: insert into watched (next poll backfills)."""
+    try:
+        conn = db()
+        if conn is None:
+            return f"couldn't track @{handle} — db unreachable (no DB_URL)"
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO watched (handle, source) VALUES (%s, 'enroll') "
+                "ON CONFLICT (handle) DO UPDATE SET active = TRUE",
+                (handle,))
+            conn.commit()
+    except Exception as e:
+        return f"couldn't track @{handle} — db unreachable ({str(e)[:80]})"
     return (f"tracking @{handle} — on the watchlist. "
             f"first card lands at urdheim/profile/{handle} once calls land.")
 
