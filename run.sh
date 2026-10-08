@@ -19,7 +19,7 @@ cmd_poll() {
 from watcher.getxapi import backfill
 from watcher.common import is_candidate, queue_candidate
 from listener.mentions import load_seeds
-from brain.detective import classify, record_call
+from brain.detective import classify, record_call, RECORDABLE, MIN_CONF
 from brain.budget import BudgetStop
 import json
 import os
@@ -71,7 +71,7 @@ with open(donep, "a") as df:
             continue
         df.write(pid + "\n"); df.flush()
     print(item["author"], item["mint"][:14], "->", v["verdict"], v["confidence"], flush=True)
-    if v["verdict"] == "call":
+    if v["verdict"] in RECORDABLE and v.get("confidence", 0) >= MIN_CONF:
         item["client"] = _ux
         try:
             record_call(item, v); n_r += 1
