@@ -2,7 +2,9 @@
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { ScrollText, Trophy, UserRound, Info } from 'lucide-react';
+import { API_BASE, avatar } from '../lib/api';
 
 const NAV = [
   ['/feed', 'Live receipts', 'Feed', ScrollText],
@@ -23,8 +25,23 @@ function GithubIcon() {
 }
 
 function Avatar() {
-  // No OAuth yet: placeholder ring. After X sign-in this swaps to the user's photo.
-  return (<span className="tabava"><UserRound /></span>);
+  // Signed-in photo from the profiles cache. Placeholder ring until then.
+  const [img, setImg] = useState('');
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const me = await fetch(API_BASE + '/api/auth/me',
+          { credentials: 'include', cache: 'no-store' }).then(r => r.json());
+        if (!live || !me.handle) return;
+        const p = await fetch(API_BASE + '/api/profile/' +
+          encodeURIComponent(me.handle), { cache: 'no-store' }).then(r => r.json());
+        if (live && p.profile && p.profile.avatar) setImg(avatar(p.profile.avatar));
+      } catch (e) { /* signed out: keep the ring */ }
+    })();
+    return () => { live = false; };
+  }, []);
+  return (<span className="tabava">{img ? <img src={img} alt="" /> : <UserRound />}</span>);
 }
 
 export default function RootLayout({ children }) {
@@ -49,7 +66,7 @@ export default function RootLayout({ children }) {
           </aside>
           <div className="mobilebar">
             <Link href="/" className="brand">URDHEIM</Link>
-            <Link href="/my" className="in">SIGN IN</Link>
+            <Link href="/signin" className="in">SIGN IN</Link>
           </div>
           {children}
           <nav className="mobiletabs">

@@ -1,6 +1,17 @@
+'use client';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { SignInBox } from '../../lib/components';
+import { API_BASE } from '../../lib/api';
 
 export default function My() {
+  const [handle, setHandle] = useState(null);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    fetch(API_BASE + '/api/auth/me', { credentials: 'include', cache: 'no-store' })
+      .then(r => r.json()).then(m => setHandle(m.handle || null))
+      .catch(() => {}).finally(() => setDone(true));
+  }, []);
   return (
     <>
       <div className="feedcol">
@@ -9,12 +20,24 @@ export default function My() {
           <div className="sub">Your filings, your record. Sign in to claim it.</div>
         </div>
         <div style={{ padding: 40, maxWidth: 560 }}>
-          <p style={{ fontSize: 16, color: '#9a8c6c', lineHeight: 1.7 }}>
-            Nobody is signed in on this browser. Once X sign-in is live, this page shows
-            every call you filed, your hit rate, and your rank among filers.</p>
-          <p style={{ fontSize: 16, color: '#9a8c6c', lineHeight: 1.7, marginTop: 14 }}>
-            Until then, your filings still count. They sit on the receipts of the calls
-            you tagged, waiting for your name.</p>
+          {!done && <p style={{ fontSize: 16, color: '#5a4f35' }}>Checking…</p>}
+          {done && handle && (
+            <>
+              <p style={{ fontSize: 16, color: '#9a8c6c', lineHeight: 1.7 }}>
+                Signed in as <span className="gold">@{handle}</span>. Your public record lives here:</p>
+              <p style={{ marginTop: 14 }}>
+                <Link href={'/profile/' + encodeURIComponent(handle)}>
+                  View my public profile</Link></p>
+            </>
+          )}
+          {done && !handle && (
+            <>
+              <p style={{ fontSize: 16, color: '#9a8c6c', lineHeight: 1.7 }}>
+                Nobody is signed in on this browser.</p>
+              <p style={{ marginTop: 14 }}>
+                <Link href="/signin">Sign in with X</Link></p>
+            </>
+          )}
         </div>
       </div>
       <aside className="siderail"><SignInBox /></aside>

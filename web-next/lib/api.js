@@ -1,5 +1,6 @@
 // Live API client. Pages fetch from the read API — no export step.
-const BASE = process.env.NEXT_PUBLIC_API || 'http://localhost:8091';
+export const API_BASE = process.env.NEXT_PUBLIC_API || 'http://localhost:8091';
+const BASE = API_BASE;
 
 async function get(path) {
   const r = await fetch(BASE + path, { cache: 'no-store' });

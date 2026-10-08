@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS allowed_users (
   nudged   BOOLEAN NOT NULL DEFAULT FALSE,
   added_at TIMESTAMPTZ DEFAULT now()
 );
+ALTER TABLE allowed_users ADD COLUMN IF NOT EXISTS refresh_token TEXT NOT NULL DEFAULT '';
 -- no json file: add/remove handles without touching the repo.
 CREATE TABLE IF NOT EXISTS watched (
   handle   TEXT PRIMARY KEY,

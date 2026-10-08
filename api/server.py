@@ -14,6 +14,12 @@ import httpx
 import psycopg  # noqa: E402
 from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import RedirectResponse  # noqa: E402
+import base64
+import hashlib
+import hmac
+import secrets  # noqa: E402
+import urllib.parse  # noqa: E402
 
 app = FastAPI(title="urdheim-api")
 _origins = [o.strip() for o in
@@ -25,7 +31,142 @@ app.add_middleware(
     allow_origins=_origins,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
+    allow_credentials=True,
 )
+
+
+# --- X sign-in (OAuth 2.0 PKCE). handle lands in allowed_users,
+# --- pfp/bio in profiles. session = HMAC cookie, no server store.
+
+def _sess_secret() -> str:
+    return os.environ.get("SESSION_SECRET", "")
+
+
+def _app_url() -> str:
+    return os.environ.get("APP_URL", "https://urdheim.zone.id").rstrip("/")
+
+
+def _callback_url() -> str:
+    return os.environ.get("OAUTH_CALLBACK", _app_url() + "/api/auth/callback")
+
+
+def _sign(handle: str) -> str:
+    mac = hmac.new(_sess_secret().encode(), handle.encode(),
+                   hashlib.sha256).hexdigest()[:32]
+    raw = f"{handle}.{mac}".encode()
+    return base64.urlsafe_b64encode(raw).decode()
+
+
+def _verify(token: str) -> str | None:
+    try:
+        handle, mac = base64.urlsafe_b64decode(token.encode()).decode().split(".")
+        want = hmac.new(_sess_secret().encode(), handle.encode(),
+                        hashlib.sha256).hexdigest()[:32]
+        if hmac.compare_digest(mac, want):
+            return handle
+    except Exception:
+        pass
+    return None
+
+
+def session_handle(request: Request) -> str | None:
+    if not _sess_secret():
+        return None
+    return _verify(request.cookies.get("urdheim_sess", ""))
+
+
+@app.get("/api/auth/login")
+def auth_login() -> RedirectResponse:
+    cid = os.environ.get("X_CLIENT_ID", "")
+    if not cid:
+        raise HTTPException(500, "x sign-in not configured")
+    state = secrets.token_urlsafe(16)
+    verifier = secrets.token_urlsafe(64)
+    chal = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+    params = urllib.parse.urlencode({
+        "response_type": "code", "client_id": cid,
+        "redirect_uri": _callback_url(),
+        "scope": "tweet.read users.read offline.access",
+        "state": state, "code_challenge": chal,
+        "code_challenge_method": "S256"})
+    res = RedirectResponse("https://x.com/i/oauth2/authorize?" + params)
+    res.set_cookie("urdheim_pkce", f"{state}.{verifier}", httponly=True,
+                   secure=True, samesite="lax", max_age=600, path="/")
+    return res
+
+
+@app.get("/api/auth/callback")
+def auth_callback(request: Request, code: str = "", state: str = "") -> RedirectResponse:
+    pkce = request.cookies.get("urdheim_pkce", "")
+    good = RedirectResponse(_app_url() + "/my")
+    bad = RedirectResponse(_app_url() + "/signin?err=1")
+    if not code or not state or "." not in pkce:
+        return bad
+    want_state, verifier = pkce.split(".", 1)
+    if not hmac.compare_digest(state, want_state):
+        return bad
+    cid = os.environ.get("X_CLIENT_ID", "")
+    csec = os.environ.get("X_CLIENT_SECRET", "")
+    try:
+        tr = httpx.post(
+            "https://api.x.com/2/oauth2/token",
+            auth=(cid, csec),
+            data={"grant_type": "authorization_code", "code": code,
+                  "redirect_uri": _callback_url(), "code_verifier": verifier},
+            timeout=20)
+        tok = tr.json()
+        access = tok.get("access_token", "")
+        refresh = tok.get("refresh_token", "")
+        if not access:
+            return bad
+        mr = httpx.get(
+            "https://api.x.com/2/users/me?user.fields="
+            "profile_image_url,description,public_metrics,verified",
+            headers={"Authorization": "Bearer " + access}, timeout=20)
+        me = mr.json().get("data", {})
+        handle = (me.get("username") or "").lower()
+        if not handle:
+            return bad
+        pm = me.get("public_metrics") or {}
+        with conn() as cn, cn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO allowed_users (handle, x_id, nudged, refresh_token)
+                   VALUES (%s, %s, TRUE, %s)
+                   ON CONFLICT (handle) DO UPDATE SET
+                     x_id = EXCLUDED.x_id, nudged = TRUE,
+                     refresh_token = EXCLUDED.refresh_token""",
+                (handle, me.get("id", ""), refresh))
+            cur.execute(
+                """INSERT INTO profiles
+                     (handle, name, avatar, bio, followers, following, verified)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (handle) DO UPDATE SET
+                     name = EXCLUDED.name, avatar = EXCLUDED.avatar,
+                     bio = EXCLUDED.bio, followers = EXCLUDED.followers,
+                     following = EXCLUDED.following,
+                     verified = EXCLUDED.verified, updated_at = now()""",
+                (handle, me.get("name") or handle,
+                 me.get("profile_image_url") or "",
+                 me.get("description") or "",
+                 (pm.get("followers_count") or 0),
+                 (pm.get("following_count") or 0),
+                 bool(me.get("verified"))))
+            cn.commit()
+    except Exception:
+        return bad
+    good.set_cookie("urdheim_sess", _sign(handle), httponly=True,
+                    secure=True, samesite="lax", max_age=30 * 86400, path="/")
+    good.delete_cookie("urdheim_pkce", path="/")
+    return good
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request) -> dict:
+    h = session_handle(request)
+    if not h:
+        return {"handle": None}
+    return {"handle": h}
 
 
 def verify_turnstile(token: str) -> bool:

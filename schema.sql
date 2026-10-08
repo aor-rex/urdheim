@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS allowed_users (
   handle   TEXT PRIMARY KEY,
   x_id     TEXT,
   nudged   BOOLEAN NOT NULL DEFAULT FALSE,
+  refresh_token TEXT NOT NULL DEFAULT '',
   added_at TIMESTAMPTZ DEFAULT now()
 );
 
