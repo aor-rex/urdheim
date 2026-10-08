@@ -16,9 +16,13 @@ from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 app = FastAPI(title="urdheim-api")
+_origins = [o.strip() for o in
+            os.environ.get("CORS_ORIGINS",
+                           "http://localhost:8092,http://127.0.0.1:8092").split(",")
+            if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8092", "http://127.0.0.1:8092"],
+    allow_origins=_origins,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
