@@ -36,6 +36,7 @@ function Avatar() {
 
 export default function RootLayout({ children }) {
   const path = usePathname() || '/';
+  const cur = path.replace(/\/+$/, '') || '/';
   if (path === '/') return (
     <html lang="en">
       <body>{children}</body>
@@ -50,7 +51,7 @@ export default function RootLayout({ children }) {
             <div style={{ height: 18 }} />
             {NAV.map(([href, label, , I]) => (
               <Link key={href} href={href}
-                className={'railnav' + (path === href ? ' on' : '')}>
+                className={'railnav' + (cur === href ? ' on' : '')}>
                 <I />{label}</Link>
             ))}
           </aside>
@@ -61,7 +62,7 @@ export default function RootLayout({ children }) {
           {children}
           <nav className="mobiletabs">
             {NAV.map(([href, , short, I]) => (
-              <Link key={href} href={href} className={path === href ? 'on' : ''}>
+              <Link key={href} href={href} className={cur === href ? 'on' : ''}>
                 {href === '/my' ? <Avatar /> : <I />}{short}</Link>
             ))}
           </nav>
