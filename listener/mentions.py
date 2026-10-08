@@ -224,9 +224,48 @@ def enroll_call(conn, author: str, mint: str, post_id: str) -> str:
     return f"logged — watching {short}. receipt follows once the call resolves."
 
 
+def is_allowed(conn, author: str) -> bool:
+    """Signed-in handles only. No conn (tests) -> closed, no one passes."""
+    if conn is None:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM allowed_users WHERE handle = %s",
+                        (author.lower(),))
+            return cur.fetchone() is not None
+    except Exception:
+        return False
+
+
+def signin_nudge(conn, author: str) -> str | None:
+    """One invite per stranger, then silence (protects the 7/day reply cap)."""
+    base = os.environ.get("APP_URL", "https://urdheim.xyz").rstrip("/")
+    msg = (f"hey @{author} — @urdheim is private. "
+           f"sign in to use it: {base}/signin")
+    if conn is None:
+        return msg
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT nudged FROM allowed_users WHERE handle = %s",
+                        (author.lower(),))
+            row = cur.fetchone()
+            if row and row[0]:
+                return None  # already invited — silence from here on
+            cur.execute(
+                "INSERT INTO allowed_users (handle, nudged) VALUES (%s, TRUE) "
+                "ON CONFLICT (handle) DO UPDATE SET nudged = TRUE",
+                (author.lower(),))
+            conn.commit()
+    except Exception:
+        return msg
+    return msg
+
+
 def execute(author: str, text: str, conn, post_id: str = "",
-              c=None) -> str | None:
+            c=None) -> str | None:
     """Brain intent -> action. Returns reply text or None (silence)."""
+    if not is_allowed(conn, author):
+        return signin_nudge(conn, author)
     intent = classify_mention(author, text)
     kind, handle, mint = intent["intent"], intent["handle"], intent["mint"]
     if handle.lower() == SELF:

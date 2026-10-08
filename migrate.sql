@@ -23,7 +23,14 @@ CREATE INDEX IF NOT EXISTS idx_calls_filer ON calls(filer_handle);
 -- submissions: who tagged it in
 ALTER TABLE submissions ADD COLUMN IF NOT EXISTS filer_handle TEXT;
 
--- watchlist: who the poll loop backfills. enroll writes here, poll reads here.
+-- tag allowlist: only signed-in handles get @urdheim responses.
+-- strangers get one signin nudge, then silence (protects the 7/day cap).
+CREATE TABLE IF NOT EXISTS allowed_users (
+  handle   TEXT PRIMARY KEY,
+  x_id     TEXT,
+  nudged   BOOLEAN NOT NULL DEFAULT FALSE,
+  added_at TIMESTAMPTZ DEFAULT now()
+);
 -- no json file: add/remove handles without touching the repo.
 CREATE TABLE IF NOT EXISTS watched (
   handle   TEXT PRIMARY KEY,
