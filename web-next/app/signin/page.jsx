@@ -4,7 +4,7 @@ import { XIcon } from '../../lib/components';
 export default function SignIn({ searchParams }) {
   const failed = searchParams && searchParams.err;
   return (
-    <div style={{
+    <div className="signwrap" style={{
       gridColumn: '2 / -1', gridRow: '1', display: 'flex',
       justifyContent: 'center', padding: '48px 24px 0',
     }}>
