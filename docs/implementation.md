@@ -10,7 +10,6 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
 - Read path: **GetXAPI** — one Bearer key, no cookies, no shells, no ban
   risk. Caller monitors push new tweets to our webhook (~2s, HMAC-signed);
   `user/tweets` covers onboarding backfill + gap polling ($0.001/call).
-  twitterapi.io stream kept as fallback transport (`watcher/watch.py`).
   NOTE: monitor webhooks need a Monitoring plan (not per-call) — confirm
   cost on the dashboard before enabling; until then, backfill + timed poll
   runs the read path on pure pay-per-call.
@@ -51,8 +50,6 @@ One platform: **Urdheim**. The X poster agent is named **Heimdall**
 - `user/tweets` does onboarding backfill (recent history per new caller) and
   gap-recovery polling with per-caller cursor files ($0.001/call, ~20 tweets).
   Poll every ~15 min as safety net under the webhooks.
-- twitterapi.io WebSocket (`watcher/watch.py`) stays as fallback transport —
-  same queue format, swap by running the other entrypoint.
 
 - Fallback transport (twitterapi.io): persistent WebSocket
   (`wss://ws.twitterapi.io/twitter/tweet/stream`) with filter rules
