@@ -107,13 +107,13 @@ def coin_receipt(conn, mint: str) -> str | None:
     for handle, coin, then, _ in rows:
         arrow = ""
         if now and then:
-            arrow = " 📈" if now > then else " 📉"
+            arrow = " ▲" if now > then else " ▼"
         lines.append(f"@{handle} called {coin} @ ${then:.8g}{arrow}")
     perf = ""
     if now and rows[0][2]:
         pct = (now - rows[0][2]) / rows[0][2] * 100
         perf = f" since first call: {pct:+.0f}%"
-    return "receipt 🧾\n" + "\n".join(lines) + f"\nnow ${now:.8g}{perf}" if now else "receipt 🧾\n" + "\n".join(lines)
+    return "receipt\n" + "\n".join(lines) + f"\nnow ${now:.8g}{perf}" if now else "receipt\n" + "\n".join(lines)
 
 
 def caller_file(conn, handle: str) -> str | None:
