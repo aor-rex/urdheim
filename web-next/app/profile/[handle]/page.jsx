@@ -1,13 +1,11 @@
 'use client';
 import { use, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiProfile, fmtAvg, fmtCount, fetchMe, signOut } from '../../../lib/api';
 import { Avatar, Receipt, RailBox, RailRow, SignInBox, Medal, Link2, Share2, BadgeCheck } from '../../../lib/components';
 import { LogOut } from 'lucide-react';
 
 export default function Profile({ params }) {
   const { handle } = use(params);
-  const router = useRouter();
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const [mine, setMine] = useState(false);
@@ -45,7 +43,7 @@ export default function Profile({ params }) {
             </div>
             {mine && (
               <button
-                onClick={async () => { await signOut(); router.replace('/feed'); }}
+                onClick={async () => { await signOut(); window.location.href = '/feed'; }}
                 className="sans"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, background: 'none', border: '1px solid #2b2519', borderRadius: 4, color: '#5a4f35', fontSize: 11, letterSpacing: 2, padding: '9px 14px', cursor: 'pointer' }}>
                 <LogOut size={13} />SIGN OUT</button>)}
