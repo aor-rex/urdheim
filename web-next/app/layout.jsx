@@ -59,7 +59,8 @@ export default function RootLayout({ children }) {
       <body>
         <div className="shell">
           <aside className="rail">
-            <Link href="/" className="brand">URDHEIM<small>SHILL RECEIPTS</small></Link>
+            <Link href="/" className="brand">
+              <img src="/logo.svg" alt="Urdheim" width={30} height={30} />URDHEIM<small>SHILL RECEIPTS</small></Link>
             <div style={{ height: 18 }} />
             {NAV.map(([href, label, , I]) => (
               <Link key={href} href={hrefFor(href)}
@@ -68,7 +69,8 @@ export default function RootLayout({ children }) {
             ))}
           </aside>
           <div className="mobilebar">
-            <Link href="/" className="brand">URDHEIM</Link>
+            <Link href="/" className="brand">
+              <img src="/logo.svg" alt="Urdheim" width={22} height={22} />URDHEIM</Link>
             {mine === '/my'
               ? <Link href="/signin" className="in">SIGN IN</Link>
               : <Link href={mine} className="me" aria-label="My profile">
@@ -84,7 +86,8 @@ export default function RootLayout({ children }) {
             ))}
           </nav>
           <footer className="appfoot">
-            <span>URDHEIM — SHILL RECEIPTS</span>
+            <span className="footbrand">
+              <img src="/logo.svg" alt="Urdheim" width={20} height={20} />URDHEIM — SHILL RECEIPTS</span>
             <span className="social">
               <a href="https://x.com/Urdheim" target="_blank" rel="noreferrer"><XIcon /></a>
               <a href="https://github.com/aor-rex/urdheim" target="_blank" rel="noreferrer"><GithubIcon /></a>

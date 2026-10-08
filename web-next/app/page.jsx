@@ -1,9 +1,28 @@
-'use client';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ScrollText, Tag, SearchCheck, Stamp, Scale, ArrowRight, ArrowUpRight } from 'lucide-react';
-import { apiFeed, apiStats, timeAgo } from '../lib/api';
+import { ScrollText, Tag, SearchCheck, Stamp, Scale, ArrowRight } from 'lucide-react';
 import { XIcon, GithubIcon } from '../lib/components';
+import { ScrambleWord } from '../lib/hero';
+import { LiveBar, FreshRows } from '../lib/landing-live';
+
+const SITE = process.env.NEXT_PUBLIC_SITE || 'https://urdheim.zone.id';
+
+export const metadata = {
+  metadataBase: new URL(SITE),
+  title: 'Urdheim — every call gets a receipt',
+  description: 'KOL accountability for memecoins on Solana and Robinhood Chain. Calls filed from X, entry frozen, verdict when the chart speaks.',
+  openGraph: {
+    title: 'Urdheim — every call gets a receipt',
+    description: 'Memecoin calls filed from X. Entry frozen at the post, verdict when the chart speaks.',
+    url: SITE,
+    siteName: 'Urdheim',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Urdheim — every call gets a receipt',
+    description: 'Memecoin calls filed from X. Entry frozen at the post, verdict when the chart speaks.',
+  },
+};
 
 const STEPS = [
   [Tag, 'Tag the call', 'Reply to any call post with @urdheim. That tag is your filing.'],
@@ -12,51 +31,12 @@ const STEPS = [
   [Scale, 'The verdict lands', 'Open calls get repriced. Green holds, red condemns. The receipt updates itself.'],
 ];
 
-const GREEK = 'αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ';
-
-function ScrambleWord() {
-  // Greek noise resolves left to right into RECEIPT, holds, scrambles again.
-  const FINAL = 'receipt';
-  const [text, setText] = useState(FINAL);
-  useEffect(() => {
-    let frame = 0;
-    let live = true;
-    const pick = () => GREEK[Math.floor(Math.random() * GREEK.length)];
-    const id = setInterval(() => {
-      if (!live) return;
-      frame += 1;
-      if (frame < 8) {
-        // full scramble
-        setText(Array.from({ length: FINAL.length },
-          () => pick()).join(''));
-      } else if (frame < 8 + FINAL.length * 3) {
-        // resolve one letter every 3 frames
-        const n = Math.min(FINAL.length,
-          Math.floor((frame - 8) / 3) + 1);
-        setText(FINAL.slice(0, n) + Array.from(
-          { length: FINAL.length - n }, () => pick()).join(''));
-      } else if (frame < 8 + FINAL.length * 3 + 40) {
-        setText(FINAL);
-      } else {
-        frame = 0;
-      }
-    }, 60);
-    return () => { live = false; clearInterval(id); };
-  }, []);
-  return <span className="swapword">{text}</span>;
-}
-
 export default function Landing() {
-  const [stats, setStats] = useState(null);
-  const [fresh, setFresh] = useState([]);
-  useEffect(() => {
-    apiStats().then(setStats).catch(() => {});
-    apiFeed(3).then((d) => setFresh(d.receipts || [])).catch(() => {});
-  }, []);
   return (
     <div className="land">
       <header className="landtop">
-        <span className="landbrand">URDHEIM</span>
+        <span className="landbrand">
+          <img src="/logo.svg" alt="Urdheim" width={30} height={30} />URDHEIM</span>
         <Link href="/feed" className="landin">OPEN THE RECORD</Link>
       </header>
       <main>
@@ -71,11 +51,7 @@ export default function Landing() {
             <Link href="/feed" className="cta gold"><ScrollText size={15} />SEE LIVE RECEIPTS<ArrowRight size={15} /></Link>
             <Link href="/my" className="cta line"><XIcon size={15} />SIGN IN</Link>
           </div>
-          {stats && (
-            <div className="livebar">
-              <span><b>{stats.calls}</b> receipts filed</span>
-              <span><b>{stats.callers}</b> callers tracked</span>
-            </div>)}
+          <LiveBar />
         </section>
         <section className="steps">
           {STEPS.map(([I, h, p], i) => (
@@ -90,23 +66,11 @@ export default function Landing() {
           <p>No account needed to file. Sign in only when you want the filings tied to your name, on your public record.</p>
           <Link href="/feed" className="cta gold"><ScrollText size={15} />OPEN THE RECORD<ArrowRight size={15} /></Link>
         </section>
-        {fresh.length > 0 && (
-          <section className="fresh">
-            <div className="freshhead">
-              <span>FRESH FROM THE RECORD</span>
-              <Link href="/feed">view all<ArrowUpRight size={13} /></Link>
-            </div>
-            {fresh.map((r, i) => (
-              <Link key={r.mint + i} href="/feed" className="freshrow">
-                <span className="ftick">{r.coin && r.coin !== '?' ? '$' + r.coin : '◇'}</span>
-                <span className="fwhat">called by @{r.caller.handle}</span>
-                <span className={'fseal ' + (r.seal === 'VINDICATED' ? 'g' : r.seal === 'CONDEMNED' ? 'r' : '')}>{r.seal}</span>
-                <span className="fts">{timeAgo(r.ts)}</span>
-              </Link>))}
-          </section>)}
+        <FreshRows />
       </main>
       <footer className="landfoot">
-        <span>URDHEIM · SHILL RECEIPTS</span>
+        <span className="footbrand">
+          <img src="/logo.svg" alt="Urdheim" width={20} height={20} />URDHEIM · SHILL RECEIPTS</span>
         <div className="footlinks">
           <Link href="/how">Help</Link>
           <a href="https://x.com/Urdheim" target="_blank" rel="noreferrer" aria-label="X"><XIcon size={16} /></a>
