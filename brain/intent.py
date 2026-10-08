@@ -31,11 +31,15 @@ Mention by {author}: {text}"""
 
 def classify_mention(author: str, text: str) -> dict:
     import brain.detective as det
+    from brain.budget import allow, log, BudgetStop
 
     key = os.environ.get("OPENCODE_API_KEY", "")
     model = os.environ.get("DETECT_MODEL", "")
     if not key or not model:
-        raise SystemExit("set OPENCODE_API_KEY and DETECT_MODEL")
+        raise RuntimeError("set OPENCODE_API_KEY and DETECT_MODEL")
+    ok, reason = allow("model/intent")
+    if not ok:
+        raise BudgetStop(f"budget stop: {reason}")
     r = httpx.post(
         API_BASE + API_PATH,
         headers={"Authorization": "Bearer " + key,
@@ -53,6 +57,7 @@ def classify_mention(author: str, text: str) -> dict:
         timeout=60,
     )
     r.raise_for_status()
+    log("model/intent")
     body = r.json()
     if "choices" in body:
         content = body["choices"][0]["message"]["content"]

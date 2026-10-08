@@ -22,10 +22,22 @@ COSTS = {
     "monitor/remove": 0.0,
     "monitor/list": 0.0,
     "tweet/create": 0.002,
+    # Model calls ride a subscription, not per-call billing — tracked as
+    # counts (cap below), cost 0. Override per-kind if that changes:
+    # MODEL_COST_DETECT=0.001
+    "model/detect": 0.0,
+    "model/intent": 0.0,
+    "model/writer": 0.0,
 }
 
 READ_KINDS = {"user/tweets", "monitor/add", "monitor/remove", "monitor/list"}
 WRITE_KINDS = {"tweet/create"}
+MODEL_KINDS = {"model/detect", "model/intent", "model/writer"}
+
+
+class BudgetStop(Exception):
+    """Raised instead of SystemExit so worker loops can sleep-and-continue
+    instead of crash-looping the container."""
 
 
 def _ledger() -> str:
@@ -99,6 +111,21 @@ def reads_today() -> int:
     return n
 
 
+def models_today() -> int:
+    n = 0
+    path = _ledger()
+    if not _os.path.exists(path):
+        return 0
+    for line in open(path):
+        try:
+            r = _json.loads(line)
+        except Exception:
+            continue
+        if r.get("day") == _today() and r.get("endpoint") in MODEL_KINDS:
+            n += 1
+    return n
+
+
 def allow(endpoint: str) -> tuple[bool, str]:
     """(ok, reason). Call BEFORE firing; call log() AFTER success."""
     if endpoint in WRITE_KINDS:
@@ -109,6 +136,10 @@ def allow(endpoint: str) -> tuple[bool, str]:
         cap = int(_os.environ.get("BUDGET_DAILY_READS", "40"))
         if reads_today() >= cap:
             return False, f"daily read cap hit ({cap})"
+    if endpoint in MODEL_KINDS:
+        cap = int(_os.environ.get("BUDGET_DAILY_MODEL", "200"))
+        if models_today() >= cap:
+            return False, f"daily model cap hit ({cap})"
     cap_m = float(_os.environ.get("BUDGET_MONTHLY_USD", "2.0"))
     if spent(month=_month()) + COSTS.get(endpoint, 0.0) > cap_m:
         return False, f"monthly $${cap_m} cap hit"
