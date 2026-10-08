@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import psycopg  # noqa: E402
 from unyx import UnyxClient  # noqa: E402
 
-from brain.detective import classify, record_call  # noqa: E402
+from brain.detective import classify, record_call, RECORDABLE, MIN_CONF  # noqa: E402
 from listener.mentions import enroll_caller  # noqa: E402
 from watcher.common import is_candidate  # noqa: E402
 
@@ -72,7 +72,8 @@ def process(limit: int = 20) -> dict:
                 out["rejected"] += 1
                 print(f"snitch skip {sid}: {str(e)[:120]}")
                 continue
-            if v.get("verdict") != "call":
+            if v.get("verdict") not in RECORDABLE or v.get(
+                    "confidence", 0) < MIN_CONF:
                 cur.execute("UPDATE submissions SET status='rejected' WHERE id=%s",
                             (sid,))
                 out["rejected"] += 1
