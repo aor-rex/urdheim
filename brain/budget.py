@@ -41,7 +41,12 @@ class BudgetStop(Exception):
 
 
 def _ledger() -> str:
-    return _os.environ.get("BUDGET_LEDGER", "watcher/spend.jsonl")
+    env = _os.environ.get("BUDGET_LEDGER", "")
+    if env:
+        return env
+    if _os.path.isdir("/data"):
+        return "/data/spend.jsonl"
+    return "watcher/spend.jsonl"
 
 
 def _today() -> str:
