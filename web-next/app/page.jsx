@@ -18,7 +18,6 @@ function ScrambleWord() {
   // Greek noise resolves left to right into RECEIPT, holds, scrambles again.
   const FINAL = 'receipt';
   const [text, setText] = useState(FINAL);
-  const [done, setDone] = useState(true);
   useEffect(() => {
     let frame = 0;
     let live = true;
@@ -28,7 +27,6 @@ function ScrambleWord() {
       frame += 1;
       if (frame < 8) {
         // full scramble
-        setDone(false);
         setText(Array.from({ length: FINAL.length },
           () => pick()).join(''));
       } else if (frame < 8 + FINAL.length * 3) {
@@ -39,14 +37,13 @@ function ScrambleWord() {
           { length: FINAL.length - n }, () => pick()).join(''));
       } else if (frame < 8 + FINAL.length * 3 + 40) {
         setText(FINAL);
-        setDone(true);
       } else {
         frame = 0;
       }
     }, 60);
     return () => { live = false; clearInterval(id); };
   }, []);
-  return <span className={'swapword ' + (done ? 'latin' : 'greek')}>{text}</span>;
+  return <span className="swapword">{text}</span>;
 }
 
 export default function Landing() {

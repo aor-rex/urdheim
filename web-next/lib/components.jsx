@@ -5,7 +5,7 @@ import {
   ShieldCheck, ShieldX, Skull, BadgeCheck, LogIn,
   Trophy, TrendingUp, Scale, Medal, Link2, Share2,
 } from 'lucide-react';
-import { avatar, fmtCount, timeAgo, fmtPrice, API_BASE } from '../lib/api';
+import { avatar, fmtCount, timeAgo, fmtPrice, API_BASE, fetchMe } from '../lib/api';
 import { useEffect, useState } from 'react';
 
 const X_PATH = 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z';
@@ -120,12 +120,8 @@ export function SignInBox() {
     let live = true;
     (async () => {
       try {
-        const m = await fetch(API_BASE + '/api/auth/me',
-          { credentials: 'include', cache: 'no-store' }).then(r => r.json());
-        if (!live || !m.handle) return;
-        const p = await fetch(API_BASE + '/api/profile/' +
-          encodeURIComponent(m.handle), { cache: 'no-store' }).then(r => r.json());
-        if (live && p.profile) setProf(p.profile);
+        const me = await fetchMe();
+        if (live && me.profile) setProf(me.profile);
       } catch (e) { /* signed out */ }
       if (live) setChecked(true);
     })();

@@ -54,11 +54,7 @@ a{color:#c9a227}
 .landtop{display:flex;align-items:center;justify-content:space-between;padding:26px 0}
 .hero,.steps,.closer{width:100%}
 .hero h1{font-size:88px;font-weight:400;line-height:1.06;margin:26px 0 0}
-.swapword{display:inline-block;font-size:1.3em}
-.swapword.greek{font-family:Georgia,'Times New Roman',serif;font-style:italic;color:#e8e0cf}
-.swapword.latin{font-family:Verdana,Geneva,sans-serif;font-weight:700;letter-spacing:5px;color:#c9a227}
-.swapch{display:inline-block;opacity:0;animation:swapin .45s ease forwards}
-@keyframes swapin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.swapword{display:inline-block;font-size:1.3em;font-family:Georgia,'Times New Roman',serif;font-style:italic;color:#f2ead6}
 .lede{font-size:21px;font-style:italic;color:#9a8c6c;line-height:1.75;max-width:760px;margin:28px auto 0}
 .ctas{display:flex;gap:14px;justify-content:center;margin-top:40px;flex-wrap:wrap}
 .cta{display:inline-flex;align-items:center;gap:10px;font-family:Verdana,sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;padding:17px 34px;border-radius:4px;text-decoration:none}

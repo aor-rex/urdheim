@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ScrollText, Trophy, UserRound, Info } from 'lucide-react';
-import { API_BASE, avatar } from '../lib/api';
+import { API_BASE, avatar, fetchMe } from '../lib/api';
 import { XIcon, GithubIcon } from '../lib/components';
 
 const NAV = [
@@ -21,13 +21,10 @@ function Avatar({ onHandle }) {
     let live = true;
     (async () => {
       try {
-        const me = await fetch(API_BASE + '/api/auth/me',
-          { credentials: 'include', cache: 'no-store' }).then(r => r.json());
+        const me = await fetchMe();
         if (!live || !me.handle) return;
         if (onHandle) onHandle('/profile/' + encodeURIComponent(me.handle));
-        const p = await fetch(API_BASE + '/api/profile/' +
-          encodeURIComponent(me.handle), { cache: 'no-store' }).then(r => r.json());
-        if (live && p.profile && p.profile.avatar) setImg(avatar(p.profile.avatar));
+        if (me.profile && me.profile.avatar) setImg(avatar(me.profile.avatar));
       } catch (e) { /* signed out: keep the ring */ }
     })();
     return () => { live = false; };

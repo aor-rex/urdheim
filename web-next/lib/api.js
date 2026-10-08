@@ -2,6 +2,32 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API || 'http://localhost:8091';
 const BASE = API_BASE;
 
+// Identity, fetched once per session then shared. Every component that
+// needs the signed-in user goes through here — never a fresh /me per mount.
+let _me = null;
+let _meAt = 0;
+const ME_TTL = 5 * 60 * 1000;
+
+export async function fetchMe() {
+  const now = Date.now();
+  if (_me && now - _meAt < ME_TTL) return _me;
+  try {
+    const m = await fetch(API_BASE + '/api/auth/me',
+      { credentials: 'include', cache: 'no-store' }).then(r => r.json());
+    if (!m.handle) {
+      _me = { handle: null, profile: null };
+    } else {
+      const p = await fetch(API_BASE + '/api/profile/' +
+        encodeURIComponent(m.handle), { cache: 'no-store' }).then(r => r.json());
+      _me = { handle: m.handle, profile: p.profile || null };
+    }
+  } catch (e) {
+    _me = { handle: null, profile: null };
+  }
+  _meAt = Date.now();
+  return _me;
+}
+
 async function get(path) {
   const r = await fetch(BASE + path, { cache: 'no-store' });
   if (!r.ok) throw new Error(r.status + ' ' + path);
