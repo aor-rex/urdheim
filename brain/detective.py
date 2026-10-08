@@ -9,7 +9,8 @@ import httpx
 API_BASE = os.environ.get("OPENCODE_API_BASE", "https://api.opencode.ai/v1")
 API_PATH = os.environ.get("OPENCODE_API_PATH", "/chat/completions")
 SESSION = os.environ.get("OPENCODE_SESSION", "urdheim-brain")
-PROMPT = """You review Solana memecoin X posts. Decide if the post is a CALL:
+PROMPT = """You review memecoin X posts (Solana + Robinhood Chain).
+Decide if the post is a CALL:
 - "call": explicitly shilling a coin (CA posted, buy language, entry talk)
 - "soft-shill": implies interest, denies intent ("not saying buy, just observing")
 - "chatting": merely discussing, no shill
