@@ -73,9 +73,17 @@ def parse_raw_tweet(raw: dict) -> dict | None:
         text = leg.get("full_text", "") or ""
         if not text and not leg.get("id_str"):
             return None
+        ts = None
+        try:
+            import datetime
+            ts = datetime.datetime.strptime(
+                leg.get("created_at", ""),
+                "%a %b %d %H:%M:%S %z %Y").timestamp()
+        except Exception:
+            ts = None
         return {"id": leg.get("id_str") or res.get("rest_id", ""),
                 "author": uleg.get("screen_name", "") or "?",
-                "text": text,
+                "text": text, "ts": ts,
                 "reply_to": leg.get("in_reply_to_status_id_str", "") or ""}
     except (KeyError, TypeError, AttributeError):
         return None
@@ -207,18 +215,19 @@ def enroll_caller(handle: str) -> str:
             f"first card lands at urdheim/profile/{handle} once calls land.")
 
 
-def filed_reply(caller: str, mint: str) -> str:
-    """Full receipt line: ticker + caller + CA + entry price + mcap.
+def filed_reply(caller: str, mint: str, snap: dict | None = None) -> str:
+    """Filer entry line: ticker + caller + CA + YOUR tag-time price.
 
-    Priced live at file time so the reply stands alone. Falls back to
-    the bare watch line when the pricer comes back empty. Stays <280."""
+    The filer's receipt is stamped now (following late is its own call).
+    The caller's entry backdates async in the snitch. Stays <280."""
     short = mint[:8] + "…" + mint[-4:] if len(mint) > 12 else mint
     base = os.environ.get("APP_URL", "https://urdheim.zone.id").rstrip("/")
-    try:
-        from watcher.common import snapshot_price, detect_chain
-        snap = snapshot_price(mint, detect_chain(mint)) or {}
-    except Exception:
-        snap = {}
+    if snap is None:
+        try:
+            from watcher.common import snapshot_price, detect_chain
+            snap = snapshot_price(mint, detect_chain(mint)) or {}
+        except Exception:
+            snap = {}
     price, mcap, sym = snap.get("price"), snap.get("mcap") or 0, snap.get("symbol") or ""
     if not price:
         return (f"logged @{caller}'s call — {short}. "
@@ -226,25 +235,47 @@ def filed_reply(caller: str, mint: str) -> str:
     ptxt = f"{price:.10f}".rstrip("0").rstrip(".")  # 0.00002812, not 2.8e-05
     tick = f"${sym} " if sym else ""
     return (f"logged {tick}@{(caller or '')[:20]} — {short} "
-            f"@ ${ptxt} | mcap ${mcap:,.0f} · "
+            f"| your entry @ ${ptxt} · "
             f"{base}/profile/{caller}")[:280]
 
 
-def enroll_call(conn, author: str, mint: str, post_id: str) -> str:
-    """track_call executor: log to submissions (detective picks it up)."""
+def enroll_call(conn, author: str, mint: str, post_id: str,
+                call_ts: float | None = None, filer: str = "",
+                tag_post_id: str = "") -> str:
+    """track_call executor: caller row backdates in the snitch, filer row
+    stamps now. Returns the filer-entry reply."""
+    snap: dict = {}
+    try:
+        from watcher.common import snapshot_price, detect_chain
+        snap = snapshot_price(mint, detect_chain(mint)) or {}
+    except Exception:
+        snap = {}
     if conn and post_id and post_id != "test-mode-no-id":
         url = f"https://x.com/i/status/{post_id}"
+        import datetime
+        call_time = (datetime.datetime.fromtimestamp(call_ts, datetime.timezone.utc)
+                     if call_ts else None)
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM submissions WHERE post_url = %s", (url,))
             if not cur.fetchone():
                 cur.execute(
                     """INSERT INTO submissions (post_url, suggested_caller,
-                                                reporter_ip, status)
-                       VALUES (%s, %s, %s, 'pending')""",
-                    (url, f"{author}:{mint}", "x-mention"))
-                conn.commit()
-    short = mint[:10] + "…" if len(mint) > 12 else mint
-    return filed_reply(author, mint)
+                                                reporter_ip, status, filer_handle,
+                                                caller_post_ts, tag_post_id)
+                       VALUES (%s, %s, %s, 'pending', %s, %s, %s)""",
+                    (url, f"{author}:{mint}", "x-mention",
+                     filer or None, call_time, tag_post_id or ""))
+            if filer and tag_post_id:
+                cur.execute(
+                    """INSERT INTO filer_entries
+                          (caller_handle, mint, filer_handle,
+                           price_at_tag, mcap_at_tag, tag_post_id)
+                       VALUES (%s, %s, %s, %s, %s, %s)
+                       ON CONFLICT (filer_handle, tag_post_id) DO NOTHING""",
+                    (author, mint, filer,
+                     snap.get("price"), snap.get("mcap"), tag_post_id))
+            conn.commit()
+    return filed_reply(author, mint, snap)
 
 
 def is_allowed(conn, author: str) -> bool:
@@ -308,16 +339,21 @@ def execute(author: str, text: str, conn, post_id: str = "",
         return enroll_caller(handle) if handle else None
     if kind == "track_call":
         m = mint or next(iter(CA_RE.findall(text or "")), "")
-        if not m and c is not None and post_id and post_id != "test-mode-no-id":
+        call_ts, caller, call_id = None, author, post_id
+        if c is not None and post_id and post_id != "test-mode-no-id":
             parent = parent_context(c, post_id)
             if parent:
-                m = next(iter(CA_RE.findall(parent["text"] or "")), "")
-                if m:
-                    return enroll_call(conn, parent["author"], m,
-                                       parent["id"])
+                call_ts = parent.get("ts")
+                if not m:
+                    m = next(iter(CA_RE.findall(parent["text"] or "")), "")
+                    if m:
+                        caller, call_id = parent["author"], parent["id"]
+        if not m:
             return ("can't tell which call you mean — "
                     "reply with the CA and i'll log it.")
-        return enroll_call(conn, author, m, post_id) if m else None
+        return enroll_call(conn, caller, m, call_id,
+                           call_ts=call_ts, filer=author,
+                           tag_post_id=post_id)
     return None
 
 

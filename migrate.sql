@@ -50,3 +50,21 @@ ALTER TABLE calls ADD COLUMN IF NOT EXISTS peak_at TIMESTAMPTZ;
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS peak_x DOUBLE PRECISION;
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS state TEXT NOT NULL DEFAULT 'open';
 CREATE INDEX IF NOT EXISTS idx_calls_state ON calls(state);
+
+-- dual receipts: caller backdated to post time, filer stamped at tag time.
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS caller_post_ts TIMESTAMPTZ;
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS tag_post_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS entry_estimated BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE TABLE IF NOT EXISTS filer_entries (
+  id            SERIAL PRIMARY KEY,
+  call_id       INT REFERENCES calls(id),
+  caller_handle TEXT NOT NULL,
+  mint          TEXT NOT NULL,
+  filer_handle  TEXT NOT NULL,
+  price_at_tag  DOUBLE PRECISION,
+  mcap_at_tag   DOUBLE PRECISION,
+  tag_post_id   TEXT NOT NULL DEFAULT '',
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (filer_handle, tag_post_id)
+);
+CREATE INDEX IF NOT EXISTS idx_filer_entries_filer ON filer_entries(filer_handle);

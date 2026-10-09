@@ -53,6 +53,6 @@ assert len(callers) == 1, f"expected 1 caller insert, got {len(callers)}"
 params = inserts[0][1]
 assert params[0] == 7 and params[2].startswith("2vvw3cSw"), params
 assert params[3] == "solana", params
-assert params[8] == "call" and params[9] == 0.92, params[8:10]
+assert params[9] == "call" and params[10] == 0.92, params[9:11]
 print("DETECTIVE PASS: 9001 recorded (call/0.92), 9003 gated out (chatting), "
       "caller upsert + calls insert well-formed")

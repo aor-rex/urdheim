@@ -55,11 +55,13 @@ def process(limit: int = 20) -> dict:
         raise SystemExit("cookie login failed — re-export cookies.json")
     out = {"accepted": 0, "rejected": 0, "enrolled": []}
     with psycopg.connect(os.environ["DB_URL"]) as cn, cn.cursor() as cur:
-        cur.execute("""SELECT id, post_url, suggested_caller FROM submissions
+        cur.execute("""SELECT id, post_url, suggested_caller, filer_handle,
+                              caller_post_ts, tag_post_id, reporter_ip
+                       FROM submissions
                        WHERE status = 'pending' ORDER BY id LIMIT %s""",
                     (limit,))
         rows = cur.fetchall()
-        for sid, url, suggested in rows:
+        for sid, url, suggested, filer, call_post_ts, tag_pid, reporter in rows:
             got = fetch_post(client, url)
             if not got or not is_candidate(got[2]):
                 cur.execute("UPDATE submissions SET status='rejected' WHERE id=%s",
@@ -85,6 +87,8 @@ def process(limit: int = 20) -> dict:
                 out["rejected"] += 1
                 continue
             from watcher.common import find_cas, snapshot_price, detect_chain
+            from watcher.history import history_price
+            import time as _time
             mints = find_cas(text)
             if not mints:
                 cur.execute("UPDATE submissions SET status='rejected' WHERE id=%s",
@@ -92,10 +96,32 @@ def process(limit: int = 20) -> dict:
                 out["rejected"] += 1
                 continue
             mint = mints[0]
-            record_call({"author": author, "post_id": post_id, "text": text,
-                         "mint": mint, "chain": detect_chain(mint),
-                         "snapshot": snapshot_price(mint),
-                         "filed_via": "form", "client": client}, v)
+            chain = detect_chain(mint)
+            call_ts = (call_post_ts.timestamp()
+                       if call_post_ts is not None else None)
+            snap, estimated = None, False
+            if call_ts and _time.time() - call_ts > 300:
+                snap = history_price(mint, chain, call_ts, patient=True)
+            if snap:
+                estimated = bool(snap.get("estimated", True))
+            else:
+                snap = snapshot_price(mint)
+                estimated = bool(call_ts)  # live fallback for an old call
+            call_id = record_call(
+                {"author": author, "post_id": post_id, "text": text,
+                 "mint": mint, "chain": chain, "snapshot": snap,
+                 "called_at": call_post_ts,
+                 "entry_estimated": estimated,
+                 "filer": filer,
+                 "filed_via": ("x-mention" if reporter == "x-mention"
+                               else "form"),
+                 "client": client}, v)
+            if call_id and filer and tag_pid:
+                cur.execute(
+                    """UPDATE filer_entries SET call_id = %s
+                       WHERE filer_handle = %s AND tag_post_id = %s
+                       AND call_id IS NULL""",
+                    (call_id, filer, tag_pid))
             cur.execute("UPDATE submissions SET status='accepted' WHERE id=%s",
                         (sid,))
             out["accepted"] += 1

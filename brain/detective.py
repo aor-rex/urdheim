@@ -61,7 +61,7 @@ def classify(author: str, text: str) -> dict:
     return json.loads(content)
 
 
-def record_call(item: dict, verdict: dict) -> None:
+def record_call(item: dict, verdict: dict) -> int | None:
     """Write a detective verdict into `calls` (creating the caller row)."""
     import psycopg
 
@@ -85,27 +85,32 @@ def record_call(item: dict, verdict: dict) -> None:
             """INSERT INTO calls(caller_id, coin, mint, chain, price_at_call,
                                  mcap_at_call, post_url, post_id, called_at,
                                  verdict, confidence, evidence_quote,
-                                 filer_handle, filed_via,
+                                 filer_handle, filed_via, entry_estimated,
                                  likes, reposts, quotes, views)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, now(), %s, %s, %s,
-                       %s, %s, %s, %s, %s, %s)
-               ON CONFLICT (post_id) DO NOTHING""",
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s,
+                       COALESCE(%s, now()),
+                       %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+               ON CONFLICT (post_id) DO NOTHING RETURNING id""",
             (caller_id, coin, item.get("mint"),
              item.get("chain") or (snap.get("chain") or "solana"),
              snap.get("price"), snap.get("mcap"),
              f"https://x.com/i/status/{item.get('post_id')}",
-             str(item.get("post_id")),
+             str(item.get("post_id")), item.get("called_at"),
              verdict.get("verdict"), verdict.get("confidence"),
              verdict.get("evidence"),
              item.get("filer"), item.get("filed_via") or "seed",
+             bool(item.get("entry_estimated", False)),
              item.get("likes") or 0, item.get("reposts") or 0,
              item.get("quotes") or 0, item.get("views") or 0),
         )
+        row = cur.fetchone()
         conn.commit()
+        call_id = row[0] if row else None
         from brain.profiles import ensure_profile
         ensure_profile(item.get("author", "?"), item.get("client"))
         if item.get("filer"):
             ensure_profile(item["filer"], item.get("client"))
+        return call_id
 
 
 def main():
