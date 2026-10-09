@@ -66,6 +66,14 @@ export const fmtCount = (n) => {
   return String(n);
 };
 
+export const fmtMcap = (n) => {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1000000000) return '$' + (n / 1000000000).toFixed(2) + 'B';
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(2) + 'M';
+  if (n >= 1000) return '$' + (n / 1000).toFixed(1).replace('.0', '') + 'K';
+  return '$' + String(Math.round(n));
+};
+
 export const timeAgo = (ts) => {
   const t = new Date(ts).getTime();
   if (isNaN(t)) return '';

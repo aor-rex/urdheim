@@ -36,7 +36,7 @@ export default function Feed() {
         <RailBox icon={TrendingUp} title="HEATING UP">
           {heating.length === 0 && <RailRow left="nothing viral" right="yet" />}
           {heating.map((r) => (
-            <RailRow key={r.mint} left={'$' + r.coin} right={fmtCount(r.eng.views) + ' views'} />))}
+            <RailRow key={r.mint} href={'/coin/' + r.mint} left={'$' + r.coin} right={fmtCount(r.eng.views) + ' views ↗'} />))}
         </RailBox>
         <SignInBox />
       </aside>

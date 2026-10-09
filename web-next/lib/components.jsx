@@ -181,12 +181,20 @@ export function RailBox({ icon: I, title, children }) {
   );
 }
 
-export function RailRow({ left, right, rightColor }) {
-  return (
-    <div className="sans" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13,
-      padding: '8px 0', borderTop: '1px solid #1a1610' }}>
+export function RailRow({ left, right, rightColor, href }) {
+  const inner = (
+    <>
       <span>{left}</span>
       <span style={{ color: rightColor || '#8a7f63' }}>{right}</span>
+    </>
+  );
+  const style = { display: 'flex', justifyContent: 'space-between', fontSize: 13,
+    padding: '8px 0', borderTop: '1px solid #1a1610' };
+  if (href)
+    return <a href={href} className="sans" style={{ ...style, textDecoration: 'none', color: 'inherit' }}>{inner}</a>;
+  return (
+    <div className="sans" style={style}>
+      {inner}
     </div>
   );
 }

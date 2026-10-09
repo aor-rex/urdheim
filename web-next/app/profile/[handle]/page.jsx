@@ -66,7 +66,7 @@ export default function Profile({ params }) {
       <aside className="siderail">
         {best && (
           <RailBox icon={Medal} title="BEST CALL">
-            <RailRow left={'$' + best.coin} right={best.mult.toFixed(1) + '×'} rightColor="#7fb069" />
+            <RailRow href={'/coin/' + best.mint} left={'$' + best.coin + ' ↗'} right={best.mult.toFixed(1) + '×'} rightColor="#7fb069" />
             <RailRow left="filed" right={best.ts ? best.ts.slice(0, 10) : ''} />
           </RailBox>)}
         {Object.keys(chains).length > 0 && (
