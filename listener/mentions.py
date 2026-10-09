@@ -426,7 +426,11 @@ def run_once(dry: bool = False, test: str = "") -> None:
         try:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
-            print("db: ok", flush=True)
+                cur.execute("SELECT COUNT(*) FROM allowed_users")
+                n_allow = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM submissions")
+                n_sub = cur.fetchone()[0]
+            print(f"db: ok allow={n_allow} subs={n_sub}", flush=True)
         except Exception as e:
             print(f"db: FAIL {str(e)[:120]}", flush=True)
             conn = None
