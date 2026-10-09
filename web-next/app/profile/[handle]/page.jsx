@@ -24,10 +24,12 @@ export default function Profile({ params }) {
     }).catch(() => setSignedOut(true));
   }, [handle]);
   if (err) return (
-    <><div className="feedcol"><div style={{ padding: 40 }} className="sans">no record on @{handle} yet.</div></div>
+    <><div className="feedcol"><div style={{ padding: 40 }} className="sans">no record on @{handle} yet.</div>
+      {ops && <OpsPanel />}</div>
       <aside className="siderail"><SignInBox /></aside></>);
   if (!data) return (
-    <><div className="feedcol"><div style={{ padding: 40, fontStyle: 'italic', color: '#8a7f63' }}>pulling the file…</div></div>
+    <><div className="feedcol"><div style={{ padding: 40, fontStyle: 'italic', color: '#8a7f63' }}>pulling the file…</div>
+      {ops && <OpsPanel />}</div>
       <aside className="siderail"><SignInBox /></aside></>);
   const { profile: p, stats: s, receipts } = data;
   const best = receipts.filter((r) => r.mult !== null)
