@@ -73,7 +73,7 @@ export default function OpsPanel() {
         {queue && Object.entries(queue.counts || {}).map(([k, n]) => (
           <div key={k} style={row}>{k}: <b style={{ color: '#e8e0cf' }}>{n}</b></div>))}
         {(queue && queue.queue || []).slice(0, 8).map((q, i) => (
-          <div key={i} style={row}>{q.status} · {q.caller || '—'} · {String(q.at).slice(0, 16)}</div>))}
+          <div key={i} style={{ ...row, wordBreak: 'break-all' }}>{q.status} · {q.caller || '—'} · {String(q.at).slice(0, 16)}</div>))}
       </div>
 
       <div className="sans" style={sec}>
@@ -110,7 +110,7 @@ export default function OpsPanel() {
         <div style={h}>AUDIT LOG</div>
         {!log && <div style={row}>loading…</div>}
         {(log && log.log || []).slice(0, 15).map((l, i) => (
-          <div key={i} style={row}>{String(l.at).slice(0, 16)} · @{l.by} · {l.op} {l.detail}</div>))}
+          <div key={i} style={{ ...row, wordBreak: 'break-all' }}>{String(l.at).slice(0, 16)} · @{l.by} · {l.op} {l.detail}</div>))}
         {(log && log.log || []).length === 0 && <div style={row}>no ops run yet.</div>}
       </div>
     </div>
