@@ -41,23 +41,45 @@ def client() -> UnyxClient:
     return c
 
 
+def _parse_ts(created: str) -> float | None:
+    try:
+        import datetime
+        return datetime.datetime.strptime(
+            created or "", "%a %b %d %H:%M:%S %z %Y").timestamp()
+    except Exception:
+        return None
+
+
 def seen_path() -> str:
     return os.environ.get("SEEN_PATH",
                           os.path.join(os.path.dirname(__file__), "seen.json"))
 
 
+SEEN_VERSION = 2
+
+# Replies are notifications: file everything, but only ping fresh tags.
+FRESH_REPLY_SECS = 3600
+
+
 def load_seen() -> set:
+    """v2 dict store. A v1 bare list means a pre-dual-receipt store whose
+    verdicts died in a container — reset so lost tags reprocess (the
+    stale-reply guard blocks duplicate replies to old ones)."""
     p = seen_path()
     if os.path.exists(p):
         try:
-            return set(json.load(open(p)))
+            data = json.load(open(p))
+            if isinstance(data, dict) and data.get("v") == SEEN_VERSION:
+                return set(data.get("ids") or [])
+            return set()
         except Exception:
             return set()
     return set()
 
 
 def save_seen(ids: set) -> None:
-    json.dump(sorted(ids), open(seen_path(), "w"))
+    json.dump({"v": SEEN_VERSION, "ids": sorted(ids)},
+              open(seen_path(), "w"))
 
 
 def parse_raw_tweet(raw: dict) -> dict | None:
@@ -118,6 +140,7 @@ def fetch_mentions(n: int = 20, c=None) -> list[dict]:
             "id": str(m.get("id", "")),
             "author": user.get("screen_name", "") or "",
             "text": m.get("text", "") or "",
+            "ts": _parse_ts(m.get("created_at", "")),
         })
     return items
 
@@ -413,7 +436,14 @@ def run_once(dry: bool = False, test: str = "") -> None:
         if dry:
             print(f"WOULD REPLY @{m['author']}: {reply[:200]}")
         else:
-            print(send_reply(m["id"], reply))
+            import time as _time
+            age = (_time.time() - m["ts"]
+                   if m.get("ts") else 0)
+            if m.get("ts") and age > FRESH_REPLY_SECS:
+                print(f"stale @{m['author']}: filed silent "
+                      f"({int(age // 60)}min old, no reply)")
+            else:
+                print(send_reply(m["id"], reply))
     save_seen(seen) if not dry else None
     if conn:
         conn.close()
