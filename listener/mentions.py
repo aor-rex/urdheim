@@ -207,6 +207,29 @@ def enroll_caller(handle: str) -> str:
             f"first card lands at urdheim/profile/{handle} once calls land.")
 
 
+def filed_reply(caller: str, mint: str) -> str:
+    """Full receipt line: ticker + caller + CA + entry price + mcap.
+
+    Priced live at file time so the reply stands alone. Falls back to
+    the bare watch line when the pricer comes back empty. Stays <280."""
+    short = mint[:8] + "…" + mint[-4:] if len(mint) > 12 else mint
+    base = os.environ.get("APP_URL", "https://urdheim.zone.id").rstrip("/")
+    try:
+        from watcher.common import snapshot_price, detect_chain
+        snap = snapshot_price(mint, detect_chain(mint)) or {}
+    except Exception:
+        snap = {}
+    price, mcap, sym = snap.get("price"), snap.get("mcap") or 0, snap.get("symbol") or ""
+    if not price:
+        return (f"logged @{caller}'s call — {short}. "
+                f"receipt: {base}/profile/{caller}")
+    ptxt = f"{price:.10f}".rstrip("0").rstrip(".")  # 0.00002812, not 2.8e-05
+    tick = f"${sym} " if sym else ""
+    return (f"logged {tick}@{(caller or '')[:20]} — {short} "
+            f"@ ${ptxt} | mcap ${mcap:,.0f} · "
+            f"{base}/profile/{caller}")[:280]
+
+
 def enroll_call(conn, author: str, mint: str, post_id: str) -> str:
     """track_call executor: log to submissions (detective picks it up)."""
     if conn and post_id and post_id != "test-mode-no-id":
@@ -221,7 +244,7 @@ def enroll_call(conn, author: str, mint: str, post_id: str) -> str:
                     (url, f"{author}:{mint}", "x-mention"))
                 conn.commit()
     short = mint[:10] + "…" if len(mint) > 12 else mint
-    return f"logged — watching {short}. receipt follows once the call resolves."
+    return filed_reply(author, mint)
 
 
 def is_allowed(conn, author: str) -> bool:
@@ -274,6 +297,10 @@ def execute(author: str, text: str, conn, post_id: str = "",
         return None
     if kind == "receipt_coin":
         m = mint or next(iter(CA_RE.findall(text or "")), "")
+        if not m and c is not None and post_id and post_id != "test-mode-no-id":
+            parent = parent_context(c, post_id)
+            if parent:
+                m = next(iter(CA_RE.findall(parent["text"] or "")), "")
         return coin_receipt(conn, m) if m else None
     if kind == "receipt_caller":
         return caller_file(conn, handle) if handle else None
@@ -333,10 +360,10 @@ def run_once(dry: bool = False, test: str = "") -> None:
             continue
         seen.add(m["id"])
         try:
-            # bare "track this" needs the parent post: open a session so
-            # execute() can read it. everything else stays session-free.
-            if ("track" in (m["text"] or "").lower()
-                    and not CA_RE.search(m["text"] or "")):
+            # no CA in the mention -> open a session so execute() can read
+            # the parent post (track this / what's this / get this).
+            if (not CA_RE.search(m["text"] or "")
+                    and m["id"] and m["id"] != "test-mode-no-id"):
                 with client() as c:
                     reply = execute(m["author"], m["text"], conn, m["id"], c)
             else:

@@ -22,8 +22,13 @@ Intents:
 - "receipt_coin": wants price/calls on a coin (CA present or named coin)
 - "receipt_caller": asks about a caller's record ("is X legit", "X's calls")
 - "track_caller": wants a caller tracked going forward ("track X", "watch X")
-- "track_call": wants THIS specific call logged ("track this", quoted call + request)
+- "track_call": wants THIS specific call logged ("track this", "get this",
+  "log this", "add this", quoted call + request). the CA often lives in the
+  parent post, not the mention — still track_call, mint may be ""
 - "ignore": chatter, greetings, jokes, unclear — stay silent
+Bare imperatives ("get this", "check this") with no address -> track_call.
+A price/quality question ("what's this at", "how's this doing") ->
+receipt_coin, mint may be "" (resolved from the parent post later).
 handle = the X handle in question (no @), or "". mint = the contract
 address if present, or "". note = <10 words why.
 Mention by {author}: {text}"""
