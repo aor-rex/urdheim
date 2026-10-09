@@ -9,11 +9,13 @@ export default function Profile({ params }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const [mine, setMine] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
   useEffect(() => {
     apiProfile(handle).then(setData).catch((e) => setErr(String(e)));
     fetchMe().then(m => {
       if (m.handle && m.handle.toLowerCase() === String(handle).toLowerCase()) setMine(true);
-    }).catch(() => {});
+      if (!m.handle) setSignedOut(true);
+    }).catch(() => setSignedOut(true));
   }, [handle]);
   if (err) return (
     <><div className="feedcol"><div style={{ padding: 40 }} className="sans">no record on @{handle} yet.</div></div>
@@ -58,6 +60,7 @@ export default function Profile({ params }) {
               <div style={{ fontSize: 11, letterSpacing: 2, color: '#5a4f35', marginTop: 5 }}>{l}</div>
             </div>))}
         </div>
+        {signedOut && (<div style={{ padding: '18px 28px 0' }}><SignInBox /></div>)}
         {receipts.map((r, i) => <Receipt key={r.mint + i} r={r} />)}
         {receipts.length === 0 && (
           <div style={{ padding: 40, fontStyle: 'italic', color: '#8a7f63' }}>

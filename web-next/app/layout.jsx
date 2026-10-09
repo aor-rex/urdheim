@@ -70,9 +70,7 @@ export default function RootLayout({ children }) {
           <div className="mobilebar">
             <Link href="/" className="brand">
               <img src="/logo.svg" alt="Urdheim" width={22} height={22} />URDHEIM</Link>
-            {mine === '/my'
-              ? <Link href="/signin" className="in">SIGN IN</Link>
-              : <Link href="/how" className="me" aria-label="Help"><BookOpen /></Link>}
+            <Link href="/how" className="me" aria-label="Help"><BookOpen /></Link>
           </div>
           {children}
           <nav className="mobiletabs">
