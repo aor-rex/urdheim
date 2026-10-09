@@ -55,7 +55,7 @@ def seen_path() -> str:
                           os.path.join(os.path.dirname(__file__), "seen.json"))
 
 
-SEEN_VERSION = 3
+SEEN_VERSION = 4
 
 # Replies are notifications: file everything, but only ping fresh tags.
 FRESH_REPLY_SECS = 3600
@@ -452,6 +452,7 @@ def run_once(dry: bool = False, test: str = "") -> None:
             continue
         seen.add(m["id"])
         try:
+            ok = is_allowed(conn, m["author"]) if conn else False
             # no CA in the mention -> open a session so execute() can read
             # the parent post (track this / what's this / get this).
             if (not CA_RE.search(m["text"] or "")
@@ -464,7 +465,7 @@ def run_once(dry: bool = False, test: str = "") -> None:
             print(f"mention skip @{m['author']}: {str(e)[:120]}")
             continue
         if not reply:
-            print(f"ignore @{m['author']}: {(m['text'] or '')[:60]}")
+            print(f"ignore @{m['author']} allow={ok}: {(m['text'] or '')[:60]}")
             continue
         if dry:
             print(f"WOULD REPLY @{m['author']}: {reply[:200]}")
@@ -472,7 +473,7 @@ def run_once(dry: bool = False, test: str = "") -> None:
             age = (_true_now() - m["ts"]
                    if m.get("ts") else 0)
             if m.get("ts") and age > FRESH_REPLY_SECS:
-                print(f"stale @{m['author']}: filed silent "
+                print(f"stale @{m['author']} allow={ok}: filed silent "
                       f"({int(age // 60)}min old, no reply)")
             else:
                 print(send_reply(m["id"], reply))
