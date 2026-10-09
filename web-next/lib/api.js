@@ -39,10 +39,63 @@ export async function signOut() {
   _meAt = Date.now();
 }
 
-async function get(path) {
+async function fetchJson(path) {
   const r = await fetch(BASE + path, { cache: 'no-store' });
   if (!r.ok) throw new Error(r.status + ' ' + path);
   return r.json();
+}
+
+// Warm/cold cache: memory-first per route. Fresh entries serve instantly
+// (warm). Stale entries serve instantly too while a background revalidate
+// refreshes them (stale-while-revalidate). Only a first-ever visit pays
+// the network (cold). TTLs mirror the server's short windows.
+const _cache = new Map();
+const TTLS = [
+  ['/api/feed', 30 * 1000],
+  ['/api/leaderboard', 30 * 1000],
+  ['/api/stats', 30 * 1000],
+  ['/api/coins', 60 * 1000],
+  ['/api/coin/', 60 * 1000],
+  ['/api/caller/', 60 * 1000],
+  ['/api/profile/', 60 * 1000],
+];
+const ttlFor = (path) => {
+  for (const [prefix, ttl] of TTLS) if (path.startsWith(prefix)) return ttl;
+  return 15 * 1000;
+};
+
+async function get(path) {
+  const now = Date.now();
+  const hit = _cache.get(path);
+  if (hit && now - hit.at < ttlFor(path)) return hit.data;
+  if (hit) {
+    // Stale: serve now, refresh behind.
+    fetchJson(path).then(
+      (data) => _cache.set(path, { data, at: Date.now() }),
+      () => {});
+    return hit.data;
+  }
+  const data = await fetchJson(path);
+  _cache.set(path, { data, at: Date.now() });
+  return data;
+}
+
+// Hover prefetch: warm a coin/profile before the click lands.
+export function warmCoin(mint) {
+  const path = '/api/coin/' + encodeURIComponent(mint);
+  if (_cache.has(path)) return;
+  fetchJson(path).then(
+    (data) => _cache.set(path, { data, at: Date.now() }),
+    () => {});
+}
+export function warmProfile(handle) {
+  for (const base of ['/api/profile/', '/api/caller/']) {
+    const path = base + encodeURIComponent(handle);
+    if (_cache.has(path)) continue;
+    fetchJson(path).then(
+      (data) => _cache.set(path, { data, at: Date.now() }),
+      () => {});
+  }
 }
 
 export const apiLeaderboard = () => get('/api/leaderboard');

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { apiCoins, fmtMcap } from '../../lib/api';
+import { apiCoins, fmtMcap, warmCoin } from '../../lib/api';
 
 export default function Coins() {
   const [coins, setCoins] = useState(null);
@@ -24,6 +24,7 @@ export default function Coins() {
           const down = c.peak && c.now && c.now < c.peak;
           return (
             <a key={c.mint} href={'/coin/' + c.mint}
+              onMouseEnter={() => warmCoin(c.mint)}
               style={{ display: 'flex', alignItems: 'center', gap: 16,
                 borderBottom: '1px solid #2b2519', padding: '18px 28px',
                 textDecoration: 'none', color: 'inherit' }}>

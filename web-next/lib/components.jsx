@@ -5,7 +5,7 @@ import {
   ShieldCheck, ShieldX, Skull, BadgeCheck, LogIn,
   Trophy, TrendingUp, Scale, Medal, Link2, Share2,
 } from 'lucide-react';
-import { avatar, fmtCount, timeAgo, fmtPrice, API_BASE, fetchMe, signOut } from '../lib/api';
+import { avatar, fmtCount, timeAgo, fmtPrice, API_BASE, fetchMe, signOut, warmCoin, warmProfile } from '../lib/api';
 import { useEffect, useState } from 'react';
 import { LogOut } from 'lucide-react';
 
@@ -91,10 +91,12 @@ export function Receipt({ r }) {
         <div style={{ fontSize: 17, margin: '8px 0', lineHeight: 1.55 }}>
           {r.coin && r.coin !== '?' && <span style={{ color: '#c9a227' }}>${r.coin} </span>}
           called by <a href={'/profile/' + r.caller.handle}
+            onMouseEnter={() => warmProfile(r.caller.handle)}
             style={{ color: '#f2ead6' }}>@{r.caller.handle}</a>
           {r.then ? ', entry ' + fmtPrice(r.then) : ''}
         </div>
         <a href={'/coin/' + r.mint} className="sans"
+          onMouseEnter={() => warmCoin(r.mint)}
           style={{ fontSize: 12, color: '#8a7f63', background: '#121009',
             border: '1px solid #2b2519', borderRadius: 3, padding: '6px 10px',
             display: 'inline-block', margin: '2px 0 4px', letterSpacing: '.3px',
@@ -204,8 +206,15 @@ export function RailRow({ left, right, rightColor, href }) {
   );
   const style = { display: 'flex', justifyContent: 'space-between', fontSize: 13,
     padding: '8px 0', borderTop: '1px solid #1a1610' };
+  const warm = () => {
+    if (!href) return;
+    const coin = href.match(/^\/coin\/(.+)/);
+    if (coin) return warmCoin(decodeURIComponent(coin[1]));
+    const prof = href.match(/^\/profile\/(.+)/);
+    if (prof) return warmProfile(decodeURIComponent(prof[1]));
+  };
   if (href)
-    return <a href={href} className="sans" style={{ ...style, textDecoration: 'none', color: 'inherit' }}>{inner}</a>;
+    return <a href={href} onMouseEnter={warm} className="sans" style={{ ...style, textDecoration: 'none', color: 'inherit' }}>{inner}</a>;
   return (
     <div className="sans" style={style}>
       {inner}

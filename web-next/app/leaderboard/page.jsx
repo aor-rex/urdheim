@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { apiFeed, apiLeaderboard, fmtAvg, fmtCount } from '../../lib/api';
+import { apiFeed, apiLeaderboard, fmtAvg, fmtCount, warmProfile } from '../../lib/api';
 import { Avatar, RailBox, RailRow, SignInBox, Scale, TrendingUp } from '../../lib/components';
 
 export default function Leaderboard() {
@@ -30,7 +30,7 @@ export default function Leaderboard() {
               <Avatar url={p.avatar} name={p.name || c.handle} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 17 }}>
-                  <a href={'/profile/' + c.handle} style={{ color: '#f2ead6', textDecoration: 'none' }}>
+                  <a href={'/profile/' + c.handle} onMouseEnter={() => warmProfile(c.handle)} style={{ color: '#f2ead6', textDecoration: 'none' }}>
                     {p.name && p.name !== c.handle ? p.name + ' ' : ''}<span style={{ color: '#8a7f63' }}>@{c.handle}</span></a>
                 </div>
                 <div className="sans" style={{ fontSize: 12, color: '#8a7f63', marginTop: 5 }}>
