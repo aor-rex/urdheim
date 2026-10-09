@@ -3,7 +3,7 @@ import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ScrollText, Trophy, UserRound, Info, Coins, BookOpen } from 'lucide-react';
+import { ScrollText, Trophy, UserRound, Info, Coins, BookOpen, BarChart3 } from 'lucide-react';
 import { API_BASE, avatar, fetchMe } from '../lib/api';
 import { XIcon, GithubIcon } from '../lib/components';
 
@@ -11,6 +11,7 @@ const NAV = [
   ['/feed', 'Live receipts', 'Feed', ScrollText],
   ['/leaderboard', 'Leaderboard', 'Board', Trophy],
   ['/coins', 'Tracked coins', 'Coins', Coins],
+  ['/stats', 'Protocol stats', 'Stats', BarChart3],
   ['/my', 'My receipts', 'Mine', UserRound],
   ['/how', 'Help', 'Help', Info],
 ];

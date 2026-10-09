@@ -222,4 +222,4 @@ export function RailRow({ left, right, rightColor, href }) {
   );
 }
 
-export { Trophy, TrendingUp, Scale, Medal, Link2, Share2, BadgeCheck };
+export { Trophy, TrendingUp, Scale, Medal, Link2, Share2, BadgeCheck, ShieldCheck };

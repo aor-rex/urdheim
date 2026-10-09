@@ -15,14 +15,14 @@ export async function fetchMe() {
     const m = await fetch(API_BASE + '/api/auth/me',
       { credentials: 'include', cache: 'no-store' }).then(r => r.json());
     if (!m.handle) {
-      _me = { handle: null, profile: null };
+      _me = { handle: null, profile: null, ops: null };
     } else {
       const p = await fetch(API_BASE + '/api/profile/' +
         encodeURIComponent(m.handle), { cache: 'no-store' }).then(r => r.json());
-      _me = { handle: m.handle, profile: p.profile || null };
+      _me = { handle: m.handle, profile: p.profile || null, ops: m.ops || null };
     }
   } catch (e) {
-    _me = { handle: null, profile: null };
+    _me = { handle: null, profile: null, ops: null };
   }
   _meAt = Date.now();
   return _me;
@@ -35,8 +35,25 @@ export async function signOut() {
       { method: 'POST', credentials: 'include' });
   } catch (e) { /* offline: clear locally anyway */ }
   document.cookie = 'urdheim_sess=; Max-Age=0; path=/; Secure; SameSite=Lax';
-  _me = { handle: null, profile: null };
+  _me = { handle: null, profile: null, ops: null };
   _meAt = Date.now();
+}
+
+// Single door for privileged writes. Same endpoint every session calls —
+// nothing in the path says admin. Capability header does the unlocking.
+export async function callOp(op, params) {
+  const me = await fetchMe();
+  const r = await fetch(BASE + '/api/ops', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(me.ops ? { 'X-Urdheim-Cap': me.ops } : {}),
+    },
+    body: JSON.stringify({ op, ...(params || {}) }),
+  });
+  if (!r.ok) throw new Error('op failed');
+  return r.json();
 }
 
 async function fetchJson(path) {

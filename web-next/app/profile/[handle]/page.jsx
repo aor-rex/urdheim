@@ -1,8 +1,12 @@
 'use client';
 import { use, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { apiProfile, fmtAvg, fmtCount, fetchMe, signOut } from '../../../lib/api';
 import { Avatar, Receipt, RailBox, RailRow, SignInBox, Medal, Link2, Share2, BadgeCheck } from '../../../lib/components';
 import { LogOut } from 'lucide-react';
+
+// Ops strings stay out of the shared chunks: only admin sessions load this.
+const OpsPanel = dynamic(() => import('../../../lib/ops'), { ssr: false });
 
 export default function Profile({ params }) {
   const { handle } = use(params);
@@ -10,11 +14,13 @@ export default function Profile({ params }) {
   const [err, setErr] = useState(null);
   const [mine, setMine] = useState(false);
   const [signedOut, setSignedOut] = useState(false);
+  const [ops, setOps] = useState(false);
   useEffect(() => {
     apiProfile(handle).then(setData).catch((e) => setErr(String(e)));
     fetchMe().then(m => {
       if (m.handle && m.handle.toLowerCase() === String(handle).toLowerCase()) setMine(true);
       if (!m.handle) setSignedOut(true);
+      if (m.ops && m.handle && m.handle.toLowerCase() === String(handle).toLowerCase()) setOps(true);
     }).catch(() => setSignedOut(true));
   }, [handle]);
   if (err) return (
@@ -61,6 +67,7 @@ export default function Profile({ params }) {
             </div>))}
         </div>
         {signedOut && (<div style={{ padding: '18px 28px 0' }}><SignInBox /></div>)}
+        {ops && <OpsPanel />}
         {receipts.map((r, i) => <Receipt key={r.mint + i} r={r} />)}
         {receipts.length === 0 && (
           <div style={{ padding: 40, fontStyle: 'italic', color: '#8a7f63' }}>

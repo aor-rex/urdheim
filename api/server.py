@@ -108,6 +108,51 @@ def _sess_secret() -> str:
     return os.environ.get("SESSION_SECRET", "")
 
 
+_ADMIN_HANDLE = os.environ.get("ADMIN_HANDLE", "").strip().lower()
+
+
+def _cap_issue(handle: str) -> str:
+    """Short-lived ops capability: handle.exp.mac, HMAC-signed. The header
+    that unlocks /api/ops — never a path, never a role string on the wire."""
+    exp = str(int(time.time()) + 900)
+    mac = hmac.new(_sess_secret().encode(), f"{handle}.{exp}".encode(),
+                   hashlib.sha256).hexdigest()[:32]
+    raw = f"{handle}.{exp}.{mac}".encode()
+    return base64.urlsafe_b64encode(raw).decode()
+
+
+def _cap_verify(token: str) -> str | None:
+    try:
+        handle, exp, mac = base64.urlsafe_b64decode(
+            token.encode()).decode().split(".")
+        if int(exp) < int(time.time()):
+            return None
+        want = hmac.new(_sess_secret().encode(), f"{handle}.{exp}".encode(),
+                        hashlib.sha256).hexdigest()[:32]
+        if hmac.compare_digest(mac, want):
+            return handle.lower()
+    except Exception:
+        pass
+    return None
+
+
+def _ensure_ops_tables() -> None:
+    try:
+        with conn() as cn, cn.cursor() as cur:
+            cur.execute("""CREATE TABLE IF NOT EXISTS ops_log (
+                id SERIAL PRIMARY KEY, handle TEXT NOT NULL,
+                op TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
+                created_at TIMESTAMPTZ DEFAULT now())""")
+            cur.execute("""ALTER TABLE calls ADD COLUMN IF NOT EXISTS
+                hidden BOOLEAN NOT NULL DEFAULT FALSE""")
+            cn.commit()
+    except Exception:
+        pass
+
+
+_ensure_ops_tables()
+
+
 def _app_url() -> str:
     return os.environ.get("APP_URL", "https://urdheim.zone.id").rstrip("/")
 
@@ -232,7 +277,10 @@ def auth_me(request: Request) -> dict:
     h = session_handle(request)
     if not h:
         return {"handle": None}
-    return {"handle": h}
+    out = {"handle": h}
+    if _ADMIN_HANDLE and h.lower() == _ADMIN_HANDLE and _sess_secret():
+        out["ops"] = _cap_issue(h.lower())
+    return out
 
 
 @app.post("/api/auth/logout")
@@ -366,7 +414,7 @@ def fetch_calls(cur, where: str, arg) -> list[dict]:
                (SELECT s.price FROM snapshots s
                  WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
         FROM calls c JOIN callers h ON h.id = c.caller_id
-        WHERE {where} ORDER BY c.called_at DESC""", (arg,))
+        WHERE COALESCE(c.hidden, FALSE) = FALSE AND ({where}) ORDER BY c.called_at DESC""", (arg,))
     cols = [d[0] for d in cur.description]
     return [shape_call(dict(zip(cols, r))) for r in cur.fetchall()]
 
@@ -421,6 +469,7 @@ def feed(limit: int = 30) -> dict:
                    (SELECT s.price FROM snapshots s
                      WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
             FROM calls c JOIN callers h ON h.id = c.caller_id
+            WHERE COALESCE(c.hidden, FALSE) = FALSE
             ORDER BY c.called_at DESC LIMIT %s""", (min(limit, 100),))
         cols = [d[0] for d in cur.description]
         raws = [dict(zip(cols, r)) for r in cur.fetchall()]
@@ -449,7 +498,8 @@ def profile(handle: str) -> dict:
                    (SELECT s.price FROM snapshots s
                      WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
             FROM calls c JOIN callers h ON h.id = c.caller_id
-            WHERE h.handle = %s OR c.filer_handle = %s
+            WHERE (h.handle = %s OR c.filer_handle = %s)
+              AND COALESCE(c.hidden, FALSE) = FALSE
             ORDER BY c.called_at DESC""", (handle, handle))
         cols = [d[0] for d in cur.description]
         raws = [dict(zip(cols, r)) for r in cur.fetchall()]
@@ -494,6 +544,7 @@ def leaderboard() -> dict:
                    (SELECT s.price FROM snapshots s
                      WHERE s.call_id = c.id ORDER BY s.taken_at DESC LIMIT 1) AS now
             FROM calls c JOIN callers h ON h.id = c.caller_id
+            WHERE COALESCE(c.hidden, FALSE) = FALSE
             ORDER BY c.called_at DESC""")
         cols = [d[0] for d in cur.description]
         by_caller: dict[str, list[dict]] = {h: [] for h in handles}
@@ -532,6 +583,7 @@ def coins() -> dict:
                    MAX(s.mcap) AS peak, MAX(c.called_at) AS last_call
             FROM calls c JOIN callers h ON h.id = c.caller_id
             LEFT JOIN snapshots s ON s.call_id = c.id
+            WHERE COALESCE(c.hidden, FALSE) = FALSE
             GROUP BY c.coin, c.mint, c.chain
             ORDER BY last_call DESC""")
         rows = cur.fetchall()
@@ -557,11 +609,13 @@ def coin(mint: str) -> dict:
             raise HTTPException(404, "no record on this coin yet")
         cur.execute("""
             SELECT MAX(mcap), MAX(taken_at) FROM snapshots s
-            JOIN calls c ON c.id = s.call_id WHERE c.mint = %s""", (mint,))
+            JOIN calls c ON c.id = s.call_id WHERE c.mint = %s
+              AND COALESCE(c.hidden, FALSE) = FALSE""", (mint,))
         peak, _ = cur.fetchone()
         cur.execute("""
             SELECT s.mcap, s.taken_at FROM snapshots s
             JOIN calls c ON c.id = s.call_id WHERE c.mint = %s
+              AND COALESCE(c.hidden, FALSE) = FALSE
             ORDER BY s.taken_at""", (mint,))
         pts = [(float(r[0] or 0), str(r[1])) for r in cur.fetchall()]
         if len(pts) > 24:
@@ -599,11 +653,14 @@ def og_coin(mint: str) -> Response:
         else:
             cur.execute("""
                 SELECT MAX(mcap) FROM snapshots s JOIN calls c
-                ON c.id = s.call_id WHERE c.mint = %s""", (mint,))
+                ON c.id = s.call_id WHERE c.mint = %s
+                  AND COALESCE(c.hidden, FALSE) = FALSE""", (mint,))
             peak = (cur.fetchone() or [0])[0] or 0
             cur.execute("""
                 SELECT s.mcap FROM snapshots s JOIN calls c ON c.id = s.call_id
-                WHERE c.mint = %s ORDER BY s.taken_at DESC LIMIT 1""", (mint,))
+                WHERE c.mint = %s
+                  AND COALESCE(c.hidden, FALSE) = FALSE
+                ORDER BY s.taken_at DESC LIMIT 1""", (mint,))
             now = ((cur.fetchone() or [0])[0]) or 0
             first = calls[-1]
             peak = peak or now or first["now"] or 0
@@ -639,11 +696,203 @@ def stats() -> dict:
     with conn() as cn, cn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM callers")
         callers = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM calls")
+        cur.execute("""SELECT COUNT(*) FROM calls
+                       WHERE COALESCE(hidden, FALSE) = FALSE""")
         calls = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM snapshots")
         snaps = cur.fetchone()[0]
-    return {"callers": callers, "calls": calls, "snapshots": snaps}
+        cur.execute("""SELECT state, COUNT(*) FROM calls
+                       WHERE COALESCE(hidden, FALSE) = FALSE
+                       GROUP BY state""")
+        states = {r[0] or "open": r[1] for r in cur.fetchall()}
+        cur.execute("""SELECT peak_x FROM calls
+                       WHERE peak_x IS NOT NULL
+                         AND COALESCE(hidden, FALSE) = FALSE""")
+        xs = sorted(r[0] for r in cur.fetchall())
+        med = xs[len(xs) // 2] if xs else None
+        cur.execute("""SELECT c.coin, h.handle, c.peak_x, c.mint FROM calls c
+                       JOIN callers h ON h.id = c.caller_id
+                       WHERE c.peak_x IS NOT NULL
+                         AND COALESCE(c.hidden, FALSE) = FALSE
+                       ORDER BY c.peak_x DESC LIMIT 1""")
+        best = cur.fetchone()
+        cur.execute("""SELECT COUNT(*) FROM calls
+                       WHERE called_at > now() - interval '7 days'
+                         AND COALESCE(hidden, FALSE) = FALSE""")
+        week_calls = cur.fetchone()[0]
+        cur.execute("""SELECT COUNT(*) FROM callers
+                       WHERE added_at > now() - interval '7 days'""")
+        week_callers = cur.fetchone()[0]
+        cur.execute("""SELECT COUNT(*) FROM snapshots
+                       WHERE taken_at > now() - interval '24 hours'""")
+        day_snaps = cur.fetchone()[0]
+        cur.execute("""SELECT chain, COUNT(*) FROM calls
+                       WHERE COALESCE(hidden, FALSE) = FALSE
+                       GROUP BY chain""")
+        chains = {r[0]: r[1] for r in cur.fetchall()}
+    return {"callers": callers, "calls": calls, "snapshots": snaps,
+            "states": states, "scored": len(xs),
+            "median_peak_x": med,
+            "best": ({"coin": best[0], "caller": best[1],
+                      "peak_x": best[2], "mint": best[3]} if best else None),
+            "week": {"calls": week_calls, "callers": week_callers,
+                    "snapshots_24h": day_snaps},
+            "chains": chains}
+
+
+_GENERIC_DENY = JSONResponse({"detail": "unknown op"}, status_code=403)
+
+_ops_hits: dict[str, list] = {}
+
+
+def _ops_limited(ip: str) -> bool:
+    now = time.monotonic()
+    hits = _ops_hits.setdefault(ip, [])
+    hits[:] = [t for t in hits if now - t < 60]
+    if len(hits) >= 10:
+        return True
+    hits.append(now)
+    if len(_ops_hits) > 2000:
+        _ops_hits.clear()
+    return False
+
+
+def _ops_admin(request: Request, body: dict) -> str | None:
+    """Triple gate: live admin session + matching capability token +
+    sane origin. Anything off → None, and the caller gets the same
+    generic denial whether the op exists or not."""
+    if not _ADMIN_HANDLE or not _sess_secret():
+        return None
+    origin = request.headers.get("origin", "")
+    if origin and not origin.rstrip("/").endswith(
+            _app_url().replace("https://", "").replace("http://", "")):
+        return None
+    sess = session_handle(request)
+    if not sess or sess.lower() != _ADMIN_HANDLE:
+        return None
+    cap = request.headers.get("x-urdheim-cap", "")
+    if not cap or _cap_verify(cap) != _ADMIN_HANDLE:
+        return None
+    return sess
+
+
+def _ops_log(handle: str, op: str, detail: str) -> None:
+    try:
+        with conn() as cn, cn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO ops_log (handle, op, detail) VALUES (%s, %s, %s)",
+                (handle, op, detail[:500]))
+            cn.commit()
+    except Exception:
+        pass
+
+
+@app.post("/api/ops")
+def ops(body: dict, request: Request):
+    if _ops_limited(_real_ip(request)):
+        return _GENERIC_DENY
+    admin = _ops_admin(request, body or {})
+    op = (body or {}).get("op", "")
+    if not admin:
+        return _GENERIC_DENY
+    try:
+        with conn() as cn, cn.cursor() as cur:
+            if op == "queue.view":
+                cur.execute("""SELECT post_url, suggested_caller, status,
+                                      created_at FROM submissions
+                               ORDER BY created_at DESC LIMIT 50""")
+                rows = [{"url": r[0], "caller": r[1], "status": r[2],
+                         "at": str(r[3])} for r in cur.fetchall()]
+                cur.execute("""SELECT status, COUNT(*) FROM submissions
+                               GROUP BY status""")
+                return {"ok": True, "queue": rows,
+                        "counts": {r[0]: r[1] for r in cur.fetchall()}}
+            if op == "errors.view":
+                cur.execute("""SELECT c.id, c.coin, h.handle, c.called_at
+                               FROM calls c JOIN callers h
+                                 ON h.id = c.caller_id
+                               LEFT JOIN snapshots s ON s.call_id = c.id
+                               WHERE s.id IS NULL
+                                 AND COALESCE(c.hidden, FALSE) = FALSE
+                                 AND c.called_at < now() - interval '1 hour'
+                               ORDER BY c.called_at DESC LIMIT 30""")
+                stuck = [{"id": r[0], "coin": r[1], "caller": r[2],
+                          "at": str(r[3])} for r in cur.fetchall()]
+                cur.execute("""SELECT job, text, tweet_id, created_at
+                               FROM poster_log ORDER BY created_at DESC
+                               LIMIT 20""")
+                posts = [{"job": r[0], "text": r[1][:160],
+                          "tweet": r[2], "at": str(r[3])}
+                         for r in cur.fetchall()]
+                return {"ok": True, "stuck": stuck, "poster": posts}
+            if op == "log.view":
+                cur.execute("""SELECT handle, op, detail, created_at
+                               FROM ops_log ORDER BY created_at DESC
+                               LIMIT 50""")
+                return {"ok": True, "log": [
+                    {"by": r[0], "op": r[1], "detail": r[2], "at": str(r[3])}
+                    for r in cur.fetchall()]}
+            if op == "allow.add":
+                h = str((body or {}).get("handle", "")).lower().lstrip("@")
+                if not h:
+                    return {"ok": False, "detail": "unknown op"}
+                cur.execute("""INSERT INTO allowed_users (handle, nudged)
+                               VALUES (%s, TRUE)
+                               ON CONFLICT (handle) DO UPDATE
+                               SET nudged = TRUE""", (h,))
+                cn.commit()
+                _ops_log(admin, op, h)
+                return {"ok": True, "handle": h}
+            if op == "allow.remove":
+                h = str((body or {}).get("handle", "")).lower().lstrip("@")
+                if not h or h == _ADMIN_HANDLE:
+                    return {"ok": False, "detail": "unknown op"}
+                cur.execute("DELETE FROM allowed_users WHERE handle = %s",
+                            (h,))
+                cn.commit()
+                _ops_log(admin, op, h)
+                return {"ok": True, "handle": h}
+            if op == "call.hide":
+                cid = int((body or {}).get("call_id", 0))
+                cur.execute("""UPDATE calls SET hidden = TRUE
+                               WHERE id = %s""", (cid,))
+                if cur.rowcount == 0:
+                    return {"ok": False, "detail": "unknown op"}
+                cn.commit()
+                _ops_log(admin, op, str(cid))
+                return {"ok": True, "call_id": cid}
+            if op == "snapshot.retry":
+                from watcher.common import snapshot_price
+                from brain.snapshotter import judge
+                cid = int((body or {}).get("call_id", 0))
+                cur.execute("""SELECT mint, chain, price_at_call, called_at
+                               FROM calls WHERE id = %s""", (cid,))
+                row = cur.fetchone()
+                if not row:
+                    return {"ok": False, "detail": "unknown op"}
+                mint, chain, entry, called_at = row
+                snap = snapshot_price(mint, chain)
+                if not snap or not snap.get("price"):
+                    return {"ok": False, "detail": "unknown op"}
+                now, liq = snap["price"], snap.get("liq") or 0
+                cur.execute("""INSERT INTO snapshots (call_id, price, mcap,
+                                                       liq)
+                               VALUES (%s, %s, %s, %s)""",
+                            (cid, now, snap.get("mcap"), liq))
+                cur.execute("""SELECT MAX(price), MAX(liq) FROM snapshots
+                               WHERE call_id = %s""", (cid,))
+                peak, max_liq = cur.fetchone()
+                peak_x = (peak / entry) if entry else None
+                state = judge(entry, peak_x, now, liq, max_liq, called_at)
+                cur.execute("""UPDATE calls SET peak = %s, peak_x = %s,
+                                              state = %s WHERE id = %s""",
+                            (peak, peak_x, state, cid))
+                cn.commit()
+                _ops_log(admin, op, f"{cid} {state}")
+                return {"ok": True, "call_id": cid, "state": state}
+    except Exception:
+        pass
+    return _GENERIC_DENY
 
 
 @app.get("/health")
