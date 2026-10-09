@@ -85,7 +85,7 @@ EOF
     ;;
   listen)
     while true; do
-      python listener/mentions.py --once >>/tmp/listen.log 2>&1
+      python -u listener/mentions.py --once 2>&1
       sleep 60
     done
     ;;
