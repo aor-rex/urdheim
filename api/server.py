@@ -734,6 +734,16 @@ def stats() -> dict:
                        WHERE COALESCE(hidden, FALSE) = FALSE
                        GROUP BY chain""")
         chains = {r[0]: r[1] for r in cur.fetchall()}
+        cur.execute("""SELECT h.handle, COUNT(c.id) AS n,
+                         COUNT(c.peak_x) AS scored,
+                         COALESCE(MAX(c.peak_x), 0) AS best
+                       FROM callers h LEFT JOIN calls c
+                         ON c.caller_id = h.id
+                        AND COALESCE(c.hidden, FALSE) = FALSE
+                       GROUP BY h.handle
+                       ORDER BY n DESC LIMIT 10""")
+        top = [{"handle": r[0], "calls": r[1], "scored": r[2],
+                "best_x": r[3]} for r in cur.fetchall()]
     return {"callers": callers, "calls": calls, "snapshots": snaps,
             "states": states, "scored": len(xs),
             "median_peak_x": med,
@@ -741,7 +751,7 @@ def stats() -> dict:
                       "peak_x": best[2], "mint": best[3]} if best else None),
             "week": {"calls": week_calls, "callers": week_callers,
                     "snapshots_24h": day_snaps},
-            "chains": chains}
+            "chains": chains, "top": top}
 
 
 _GENERIC_DENY = JSONResponse({"detail": "unknown op"}, status_code=403)

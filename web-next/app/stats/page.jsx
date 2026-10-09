@@ -55,6 +55,14 @@ export default function Stats() {
             <Num v={s.week.snapshots_24h} label="SNAPS 24H" />
           </div>
           <div style={{ padding: '22px 28px', borderBottom: '1px solid #2b2519' }}>
+            <div className="sans" style={{ fontSize: 11, letterSpacing: 3, color: '#c9a227', marginBottom: 14 }}>TOP CALLERS</div>
+            {(s.top || []).map((t, i) => (
+              <RailRow key={t.handle} href={'/profile/' + t.handle}
+                left={'#' + (i + 1) + ' @' + t.handle}
+                right={t.calls + ' call' + (t.calls === 1 ? '' : 's') + (t.best_x ? ' · ' + Number(t.best_x).toFixed(1) + '×' : '')} />))}
+            {(!s.top || !s.top.length) && <div style={{ fontSize: 14, fontStyle: 'italic', color: '#8a7f63' }}>no callers yet.</div>}
+          </div>
+          <div style={{ padding: '22px 28px', borderBottom: '1px solid #2b2519' }}>
             <div className="sans" style={{ fontSize: 11, letterSpacing: 3, color: '#c9a227', marginBottom: 14 }}>CHAINS</div>
             {Object.entries(s.chains || {}).map(([ch, n]) => (
               <div key={ch} className="sans" style={{ display: 'flex', gap: 12, fontSize: 13, color: '#8a7f63', marginBottom: 8 }}>
