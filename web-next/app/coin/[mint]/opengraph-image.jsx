@@ -100,6 +100,6 @@ function card(c, id) {
       </div>
       <div style={{ fontSize: 20, color: FAINT, marginTop: 34,
         fontFamily: 'Verdana, sans-serif', letterSpacing: 1 }}>
-        {id.slice(0, 18)}…{id.slice(-6)} · urdheim.zone.id</div>
+        {id.slice(0, 18) + '...' + id.slice(-6) + ' · urdheim.zone.id'}</div>
     </div>);
 }
