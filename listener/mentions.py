@@ -299,14 +299,21 @@ def enroll_call(conn, author: str, mint: str, post_id: str,
                      if call_ts else None)
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM submissions WHERE post_url = %s", (url,))
-            if not cur.fetchone():
+            row = cur.fetchone()
+            if not row:
                 cur.execute(
                     """INSERT INTO submissions (post_url, suggested_caller,
                                                 reporter_ip, status, filer_handle,
                                                 caller_post_ts, tag_post_id)
-                       VALUES (%s, %s, %s, 'pending', %s, %s, %s)""",
+                       VALUES (%s, %s, %s, 'pending', %s, %s, %s)
+                       RETURNING id""",
                     (url, f"{author}:{mint}", "x-mention",
                      filer or None, call_time, tag_post_id or ""))
+                new_sub = (cur.fetchone() or [None])[0]
+                print(f"enroll: sub #{new_sub} {author}:{mint[:12]}… "
+                      f"filer={filer} tag={tag_post_id}", flush=True)
+            else:
+                print(f"enroll: dupe sub #{row[0]} {url[-19:]}", flush=True)
             if filer and tag_post_id:
                 cur.execute(
                     """INSERT INTO filer_entries
@@ -363,6 +370,7 @@ def execute(author: str, text: str, conn, post_id: str = "",
     if not is_allowed(conn, author):
         return signin_nudge(conn, author)
     intent = classify_mention(author, text)
+    print(f"intent @{author}: {intent}", flush=True)
     kind, handle, mint = intent["intent"], intent["handle"], intent["mint"]
     if handle.lower() == SELF:
         handle = ""
