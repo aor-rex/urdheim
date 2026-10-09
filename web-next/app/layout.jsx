@@ -38,7 +38,6 @@ export default function RootLayout({ children }) {
   const cur = path.replace(/\/+$/, '') || '/';
   // Mine points straight at your profile once the handle resolves.
   const [mine, setMine] = useState('/my');
-  const [meImg, setMeImg] = useState('');
   const hrefFor = (href) => (href === '/my' ? mine : href);
   const activeFor = (href) => (href === '/my' ? (cur === mine || cur === '/my') : cur === href);
   useEffect(() => {
@@ -46,7 +45,6 @@ export default function RootLayout({ children }) {
     fetchMe().then(me => {
       if (!live || !me.handle) return;
       setMine('/profile/' + encodeURIComponent(me.handle));
-      if (me.profile && me.profile.avatar) setMeImg(avatar(me.profile.avatar));
     }).catch(() => {});
     return () => { live = false; };
   }, []);
@@ -74,10 +72,7 @@ export default function RootLayout({ children }) {
               <img src="/logo.svg" alt="Urdheim" width={22} height={22} />URDHEIM</Link>
             {mine === '/my'
               ? <Link href="/signin" className="in">SIGN IN</Link>
-              : <Link href={mine} className="me" aria-label="My profile">
-                  {meImg
-                    ? <img src={meImg} alt="" />
-                    : <UserRound />}</Link>}
+              : <Link href="/how" className="me" aria-label="Help"><Info /></Link>}
           </div>
           {children}
           <nav className="mobiletabs">
