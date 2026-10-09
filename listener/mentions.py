@@ -420,6 +420,16 @@ def send_reply(post_id: str, text: str, dry: bool = False) -> dict:
 def run_once(dry: bool = False, test: str = "") -> None:
     seen = load_seen()
     conn = db()
+    if conn is None:
+        print("db: none (no DB_URL)", flush=True)
+    else:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+            print("db: ok", flush=True)
+        except Exception as e:
+            print(f"db: FAIL {str(e)[:120]}", flush=True)
+            conn = None
     if test:
         m = re.match(r"@(\w+)\s+(.*)", test)
         author, text = (m.group(1), m.group(2)) if m else ("tester", test)
