@@ -137,17 +137,24 @@ def _cap_verify(token: str) -> str | None:
 
 
 def _ensure_ops_tables() -> None:
-    try:
-        with conn() as cn, cn.cursor() as cur:
-            cur.execute("""CREATE TABLE IF NOT EXISTS ops_log (
-                id SERIAL PRIMARY KEY, handle TEXT NOT NULL,
-                op TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
-                created_at TIMESTAMPTZ DEFAULT now())""")
-            cur.execute("""ALTER TABLE calls ADD COLUMN IF NOT EXISTS
-                hidden BOOLEAN NOT NULL DEFAULT FALSE""")
-            cn.commit()
-    except Exception:
-        pass
+    # Startup ordering: the api can boot before postgres answers.
+    # Retry with backoff — a missed migration 500s every read endpoint.
+    for attempt in range(6):
+        try:
+            with conn() as cn, cn.cursor() as cur:
+                cur.execute("""CREATE TABLE IF NOT EXISTS ops_log (
+                    id SERIAL PRIMARY KEY, handle TEXT NOT NULL,
+                    op TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
+                    created_at TIMESTAMPTZ DEFAULT now())""")
+                cur.execute("""ALTER TABLE calls ADD COLUMN IF NOT EXISTS
+                    hidden BOOLEAN NOT NULL DEFAULT FALSE""")
+                cn.commit()
+            return
+        except Exception:
+            if attempt == 5:
+                pass
+            else:
+                time.sleep(5)
 
 
 _ensure_ops_tables()
