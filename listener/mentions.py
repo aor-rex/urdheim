@@ -322,7 +322,13 @@ def run_once(dry: bool = False, test: str = "") -> None:
         print(f"TEST mention @{author}: {text[:80]}")
         print("DECISION:", (reply or "SILENCE")[:400])
         return
-    for m in fetch_mentions():
+    try:
+        found = fetch_mentions()
+    except Exception as e:
+        print(f"mentions fetch failed: {str(e)[:150]}", flush=True)
+        found = []
+    print(f"mentions: {len(found)}", flush=True)
+    for m in found:
         if m["id"] in seen or not m["id"]:
             continue
         seen.add(m["id"])
