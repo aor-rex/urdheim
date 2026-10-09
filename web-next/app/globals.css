@@ -94,6 +94,14 @@ a{color:#c9a227}
 .fseal.g{color:#7fb069;border-color:#7fb069}
 .fseal.r{color:#c1443c;border-color:#c1443c}
 .fts{font-family:Verdana,sans-serif;font-size:12px;color:#5a4f35}
+.cointitle{font-size:clamp(30px,8vw,48px)}
+.coinwrap{max-width:1180px}
+@media (min-width:1001px){
+  .coinwrap{max-width:none}
+  .cointitle{font-size:64px}
+  .coingrid{display:grid;grid-template-columns:minmax(0,7fr) minmax(280px,4fr);gap:28px;align-items:start}
+  .coincol{position:sticky;top:24px}
+}
 @media (max-width:1000px){.shell{align-content:start}.rcard{padding:16px}.fhead{padding:18px}.fhead h1{font-size:22px}.mobilebar,.mobiletabs{display:flex}.mobiletabs a.on{color:#c9a227}.mobiletabs .tabava{background:transparent;border:none}.mobiletabs .tabava img{border-radius:50%;border:1px solid #c9a227}.appfoot{margin-bottom:86px;padding:22px 24px 28px}.hero{padding:56px 0 48px}.hero h1{font-size:40px}.landtop{padding:16px 4px}.steps{grid-template-columns:1fr}.step{border-left:none;border-top:1px solid #2b2519}.step:first-child{border-top:none}.land{padding:0 20px}.landfoot{margin:0 -20px;padding:22px 24px 34px}.landfoot .social,.appfoot .social{padding-right:4px}.freshrow{flex-wrap:wrap;gap:10px 16px}}
 /* keep last: footer must own column 1 on mobile, not the desktop 2/-1 */
 @media (max-width:1000px){.appfoot{grid-column:1/-1}.shell{grid-template-rows:auto auto auto 1fr}.signwrap{grid-column:1/-1 !important;grid-row:auto !important;padding:32px 0 0 !important}}

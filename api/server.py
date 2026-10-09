@@ -534,17 +534,23 @@ def coin(mint: str) -> dict:
             JOIN calls c ON c.id = s.call_id WHERE c.mint = %s""", (mint,))
         peak, _ = cur.fetchone()
         cur.execute("""
-            SELECT price, mcap FROM snapshots s JOIN calls c ON c.id = s.call_id
-            WHERE c.mint = %s ORDER BY s.taken_at DESC LIMIT 1""", (mint,))
-        last = cur.fetchone()
+            SELECT s.mcap, s.taken_at FROM snapshots s
+            JOIN calls c ON c.id = s.call_id WHERE c.mint = %s
+            ORDER BY s.taken_at""", (mint,))
+        pts = [(float(r[0] or 0), str(r[1])) for r in cur.fetchall()]
+        if len(pts) > 24:
+            step = len(pts) / 24
+            pts = [pts[int(i * step)] for i in range(24)]
     first = calls[-1]
-    now_mcap = (last or [0, 0])[1] or 0
+    last = pts[-1] if pts else (0, "")
+    now_mcap = last[0] or 0
     peak = peak or now_mcap or first["now"] or 0
     drop = (now_mcap / peak) if peak and now_mcap else None
     return {
         "coin": first["coin"], "mint": mint, "chain": first["chain"],
         "dead": bool(drop is not None and drop < 0.2),
         "delta": pct(drop), "peak": peak, "now": now_mcap,
+        "history": [{"mcap": m, "t": t} for m, t in pts],
         "touchers": [{
             "handle": c["handle"],
             "note": f"called {c['called_at']}",
