@@ -85,10 +85,10 @@ function card(c, id) {
         <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 480,
           overflow: 'hidden' }}>
           <div style={{ fontSize: 84, whiteSpace: 'nowrap',
-            overflow: 'hidden', textOverflow: 'ellipsis' }}>${ticker}</div>
+            overflow: 'hidden', textOverflow: 'ellipsis' }}>{'$' + ticker}</div>
           <div style={{ fontSize: 24, color: sealC,
             fontFamily: 'Verdana, sans-serif', marginTop: 10,
-            letterSpacing: 4 }}>{seal} {c ? c.delta : ''}</div>
+            letterSpacing: 4 }}>{seal + (c && c.delta ? ' ' + c.delta : '')}</div>
         </div>
         <div style={{ width: 2, height: 170, background: '#2b2519', flex: 'none' }} />
         <div style={{ display: 'flex', gap: 44, flex: 'none' }}>
