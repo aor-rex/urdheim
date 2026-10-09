@@ -55,7 +55,7 @@ def seen_path() -> str:
                           os.path.join(os.path.dirname(__file__), "seen.json"))
 
 
-SEEN_VERSION = 4
+SEEN_VERSION = 5
 
 # Replies are notifications: file everything, but only ping fresh tags.
 FRESH_REPLY_SECS = 3600
