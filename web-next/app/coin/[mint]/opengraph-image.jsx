@@ -13,6 +13,8 @@ const GREEN = '#7fb069';
 const RED = '#c1443c';
 const API = process.env.NEXT_PUBLIC_API || 'http://localhost:8091';
 
+export const runtime = 'nodejs';
+
 async function font(name) {
   const b = await readFile(join(process.cwd(), 'app', 'og-fonts', name));
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
@@ -36,23 +38,39 @@ function Stat({ v, label, color }) {
 }
 
 export default async function Og({ params }) {
-  const { mint } = await params;
+  const { mint } = (await params) || {};
+  const id = String(mint || '');
   let c = null;
   try {
-    const r = await fetch(API + '/api/coin/' + encodeURIComponent(mint),
-      { next: { revalidate: 60 }, signal: AbortSignal.timeout(7000) });
-    if (r.ok) c = await r.json();
-  } catch (e) { /* fallback card below */ }
+    const [reg, ita, sans] = await Promise.all([
+      font('Gelasio-Regular.ttf'),
+      font('Gelasio-Italic.ttf'),
+      font('LiberationSans-Regular.ttf'),
+    ]);
+    try {
+      const r = await fetch(API + '/api/coin/' + encodeURIComponent(id),
+        { next: { revalidate: 60 }, signal: AbortSignal.timeout(2500) });
+      if (r.ok) c = await r.json();
+    } catch (e) { /* numbers stay blank, card still renders */ }
+    return new ImageResponse(card(c, id), {
+      ...size,
+      fonts: [
+        { name: 'Georgia', data: reg, style: 'normal', weight: 400 },
+        { name: 'Georgia', data: ita, style: 'italic', weight: 400 },
+        { name: 'Verdana', data: sans, style: 'normal', weight: 400 },
+      ],
+    });
+  } catch (e) {
+    return new ImageResponse(card(null, id), { ...size });
+  }
+}
+
+function card(c, id) {
   const ticker = (c && c.coin) || 'UNKNOWN';
   const seal = c && c.dead ? 'RUGGED' : 'TRACKED';
   const sealC = c && c.dead ? RED : GOLD;
   const n = (c && c.touchers && c.touchers.length) || 0;
-  const [reg, ita, sans] = await Promise.all([
-    font('Gelasio-Regular.ttf'),
-    font('Gelasio-Italic.ttf'),
-    font('LiberationSans-Regular.ttf'),
-  ]);
-  return new ImageResponse(
+  return (
     <div style={{
       width: 1200, height: 630, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', background: '#0c0a08',
@@ -82,13 +100,6 @@ export default async function Og({ params }) {
       </div>
       <div style={{ fontSize: 20, color: FAINT, marginTop: 34,
         fontFamily: 'Verdana, sans-serif', letterSpacing: 1 }}>
-        {String(mint).slice(0, 18)}…{String(mint).slice(-6)} · urdheim.zone.id</div>
-    </div>, {
-      ...size,
-      fonts: [
-        { name: 'Georgia', data: reg, style: 'normal', weight: 400 },
-        { name: 'Georgia', data: ita, style: 'italic', weight: 400 },
-        { name: 'Verdana', data: sans, style: 'normal', weight: 400 },
-      ],
-    });
+        {id.slice(0, 18)}…{id.slice(-6)} · urdheim.zone.id</div>
+    </div>);
 }

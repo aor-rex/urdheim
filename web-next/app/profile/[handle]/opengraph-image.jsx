@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
+export const runtime = 'nodejs';
 
 const GOLD = '#c9a227';
 const CREAM = '#f2ead6';
@@ -20,7 +21,7 @@ async function font(name) {
 async function avatar(url) {
   try {
     const r = await fetch(url.replace('_normal.', '_400x400.'),
-      { signal: AbortSignal.timeout(7000) });
+      { signal: AbortSignal.timeout(2500) });
     if (!r.ok) throw new Error('no pic');
     const b = Buffer.from(await r.arrayBuffer());
     return `data:image/jpeg;base64,${b.toString('base64')}`;
@@ -39,27 +40,44 @@ function Stat({ v, label, color }) {
 }
 
 export default async function Og({ params }) {
-  const { handle } = await params;
-  const h = String(handle).toLowerCase();
-  let p = null;
-  let s = null;
+  const { handle } = (await params) || {};
+  const h = String(handle || '').toLowerCase();
   try {
-    const r = await fetch(API + '/api/profile/' + encodeURIComponent(h),
-      { next: { revalidate: 60 }, signal: AbortSignal.timeout(7000) });
-    if (r.ok) ({ profile: p, stats: s } = await r.json());
-  } catch (e) { /* fallback card below */ }
-  const name = (p && p.name) || ('@' + h);
-  const pic = p && p.avatar ? await avatar(p.avatar) : null;
-  const filed = (s && s.filed) || 0;
-  const scored = (s && s.scored) || 0;
-  const avg = (s && s.avg) || 0;
-  const avgC = avg > 0 ? '#7fb069' : avg < 0 ? '#c1443c' : CREAM;
-  const [reg, ita, sans] = await Promise.all([
-    font('Gelasio-Regular.ttf'),
-    font('Gelasio-Italic.ttf'),
-    font('LiberationSans-Regular.ttf'),
-  ]);
-  return new ImageResponse(
+    const [reg, ita, sans] = await Promise.all([
+      font('Gelasio-Regular.ttf'),
+      font('Gelasio-Italic.ttf'),
+      font('LiberationSans-Regular.ttf'),
+    ]);
+    let p = null;
+    let s = null;
+    try {
+      const r = await fetch(API + '/api/profile/' + encodeURIComponent(h),
+        { next: { revalidate: 60 }, signal: AbortSignal.timeout(2500) });
+      if (r.ok) ({ profile: p, stats: s } = await r.json());
+    } catch (e) { /* numbers stay blank, card still renders */ }
+    const name = (p && p.name) || ('@' + h);
+    const pic = p && p.avatar ? await avatar(p.avatar) : null;
+    const filed = (s && s.filed) || 0;
+    const scored = (s && s.scored) || 0;
+    const avg = (s && s.avg) || 0;
+    const avgC = avg > 0 ? '#7fb069' : avg < 0 ? '#c1443c' : CREAM;
+    return new ImageResponse(card({ h, name, pic, filed, scored, avg, avgC }), {
+      ...size,
+      fonts: [
+        { name: 'Georgia', data: reg, style: 'normal', weight: 400 },
+        { name: 'Georgia', data: ita, style: 'italic', weight: 400 },
+        { name: 'Verdana', data: sans, style: 'normal', weight: 400 },
+      ],
+    });
+  } catch (e) {
+    return new ImageResponse(
+      card({ h, name: '@' + h, pic: null, filed: 0, scored: 0, avg: 0, avgC: CREAM }),
+      { ...size });
+  }
+}
+
+function card({ h, name, pic, filed, scored, avg, avgC }) {
+  return (
     <div style={{
       width: 1200, height: 630, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', background: '#0c0a08',
@@ -92,12 +110,5 @@ export default async function Og({ params }) {
           <Stat v={(avg > 0 ? '+' : '') + avg + '%'} label="AVG RETURN" color={avgC} />
         </div>
       </div>
-    </div>, {
-      ...size,
-      fonts: [
-        { name: 'Georgia', data: reg, style: 'normal', weight: 400 },
-        { name: 'Georgia', data: ita, style: 'italic', weight: 400 },
-        { name: 'Verdana', data: sans, style: 'normal', weight: 400 },
-      ],
-    });
+    </div>);
 }
