@@ -71,6 +71,15 @@ function actionText(r) {
 
 export function Receipt({ r }) {
   const filer = r.filer || {};
+  const [copied, setCopied] = useState(false);
+  const share = () => {
+    try {
+      const url = window.location.origin + '/coin/' + r.mint;
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+        .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); })
+        .catch(() => {});
+    } catch (e) { /* clipboard unavailable */ }
+  };
   const nowTxt = r.now !== null && r.now !== undefined
     ? <b style={{ color: r.good ? '#7fb069' : '#c1443c', fontWeight: 400 }}>{fmtPrice(r.now)}</b>
     : <b style={{ fontWeight: 400 }}>awaiting snapshot</b>;
@@ -107,6 +116,11 @@ export function Receipt({ r }) {
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Repeat size={14} />{fmtCount(r.eng.reposts)}</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Quote size={14} />{fmtCount(r.eng.quotes)}</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Eye size={14} />{fmtCount(r.eng.views)}</span>
+          <button onClick={share} className="sans" title="Copy link to this receipt"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none',
+              border: 'none', cursor: 'pointer', fontSize: 12,
+              color: copied ? '#7fb069' : '#c9a227', padding: 0 }}>
+            <Share2 size={14} />{copied ? 'copied' : 'share'}</button>
         </div>
       </div>
     </div>

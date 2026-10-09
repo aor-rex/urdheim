@@ -48,6 +48,7 @@ async function get(path) {
 export const apiLeaderboard = () => get('/api/leaderboard');
 export const apiCaller = (h) => get('/api/caller/' + encodeURIComponent(h));
 export const apiCoin = (m) => get('/api/coin/' + encodeURIComponent(m));
+export const apiCoins = () => get('/api/coins');
 export const apiFeed = (n) => get('/api/feed?limit=' + (n || 30));
 export const apiProfile = (h) => get('/api/profile/' + encodeURIComponent(h));
 export const apiStats = () => get('/api/stats');

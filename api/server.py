@@ -523,6 +523,32 @@ def caller(handle: str) -> dict:
     return caller_row(handle, calls, "—")
 
 
+@app.get("/api/coins")
+def coins() -> dict:
+    with conn() as cn, cn.cursor() as cur:
+        cur.execute("""
+            SELECT c.coin, c.mint, c.chain, COUNT(DISTINCT c.id) AS callers,
+                   COUNT(DISTINCT h.handle) AS names,
+                   MAX(s.mcap) AS peak, MAX(c.called_at) AS last_call
+            FROM calls c JOIN callers h ON h.id = c.caller_id
+            LEFT JOIN snapshots s ON s.call_id = c.id
+            GROUP BY c.coin, c.mint, c.chain
+            ORDER BY last_call DESC""")
+        rows = cur.fetchall()
+        out = []
+        for coin, mint, chain, n_calls, n_names, peak, last in rows:
+            cur.execute("""
+                SELECT s.mcap FROM snapshots s JOIN calls c ON c.id = s.call_id
+                WHERE c.mint = %s ORDER BY s.taken_at DESC LIMIT 1""", (mint,))
+            lr = cur.fetchone()
+            now = (lr[0] if lr else 0) or 0
+            out.append({"coin": coin, "mint": mint, "chain": chain,
+                        "calls": n_calls, "callers": n_names,
+                        "peak": float(peak or 0), "now": float(now),
+                        "last_call": str(last or "")})
+    return {"coins": out}
+
+
 @app.get("/api/coin/{mint}")
 def coin(mint: str) -> dict:
     with conn() as cn, cn.cursor() as cur:
