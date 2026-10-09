@@ -157,9 +157,6 @@ def _ensure_ops_tables() -> None:
                 time.sleep(5)
 
 
-_ensure_ops_tables()
-
-
 def _app_url() -> str:
     return os.environ.get("APP_URL", "https://urdheim.zone.id").rstrip("/")
 
@@ -905,3 +902,6 @@ def ops(body: dict, request: Request):
 @app.get("/health")
 def health() -> dict:
     return {"ok": True}
+
+
+_ensure_ops_tables()
