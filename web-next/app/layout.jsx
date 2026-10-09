@@ -3,7 +3,7 @@ import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ScrollText, Trophy, UserRound, Info, Coins } from 'lucide-react';
+import { ScrollText, Trophy, UserRound, Info, Coins, BookOpen } from 'lucide-react';
 import { API_BASE, avatar, fetchMe } from '../lib/api';
 import { XIcon, GithubIcon } from '../lib/components';
 
@@ -72,11 +72,11 @@ export default function RootLayout({ children }) {
               <img src="/logo.svg" alt="Urdheim" width={22} height={22} />URDHEIM</Link>
             {mine === '/my'
               ? <Link href="/signin" className="in">SIGN IN</Link>
-              : <Link href="/how" className="me" aria-label="Help"><Info /></Link>}
+              : <Link href="/how" className="me" aria-label="Help"><BookOpen /></Link>}
           </div>
           {children}
           <nav className="mobiletabs">
-            {NAV.map(([href, , short, I]) => (
+            {NAV.filter(([href]) => href !== '/how').map(([href, , short, I]) => (
               <Link key={href} href={hrefFor(href)} className={activeFor(href) ? 'on' : ''}>
                 {href === '/my' ? <Avatar onHandle={setMine} /> : <I />}{short}</Link>
             ))}
