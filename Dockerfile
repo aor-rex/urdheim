@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
     && pip install --no-cache-dir -r requirements.txt
 
 COPY api ./api
+COPY web-next/app/og-fonts ./web-next/app/og-fonts
 COPY brain ./brain
 COPY watcher ./watcher
 COPY listener ./listener

@@ -14,7 +14,7 @@ import httpx
 import psycopg  # noqa: E402
 from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
-from fastapi.responses import JSONResponse, RedirectResponse  # noqa: E402
+from fastapi.responses import JSONResponse, RedirectResponse, Response  # noqa: E402
 import base64
 import hashlib
 import hmac
@@ -587,6 +587,51 @@ def coin(mint: str) -> dict:
                  + (f"Down {pct(drop)} from peak." if drop and drop < 1
                     else "Holding above call levels.")),
     }
+
+
+@app.get("/api/og/coin/{mint}")
+def og_coin(mint: str) -> Response:
+    from api.og import coin_card
+    with conn() as cn, cn.cursor() as cur:
+        calls = fetch_calls(cur, "c.mint = %s", mint)
+        if not calls:
+            img = coin_card("UNKNOWN", "TRACKED", "", 0, 0, 0, mint)
+        else:
+            cur.execute("""
+                SELECT MAX(mcap) FROM snapshots s JOIN calls c
+                ON c.id = s.call_id WHERE c.mint = %s""", (mint,))
+            peak = (cur.fetchone() or [0])[0] or 0
+            cur.execute("""
+                SELECT s.mcap FROM snapshots s JOIN calls c ON c.id = s.call_id
+                WHERE c.mint = %s ORDER BY s.taken_at DESC LIMIT 1""", (mint,))
+            now = ((cur.fetchone() or [0])[0]) or 0
+            first = calls[-1]
+            peak = peak or now or first["now"] or 0
+            drop = (now / peak) if peak and now else None
+            delta = pct(drop) if drop else ""
+            img = coin_card(first["coin"], "TRACKED", delta, peak, now,
+                            len(calls), mint)
+    return Response(img, media_type="image/png",
+                    headers={"Cache-Control": "public, s-maxage=60"})
+
+
+@app.get("/api/og/profile/{handle}")
+def og_profile(handle: str) -> Response:
+    from api.og import profile_card
+    h = (handle or "").lower()
+    with conn() as cn, cn.cursor() as cur:
+        cur.execute("SELECT handle, name FROM profiles WHERE handle = %s", (h,))
+        row = cur.fetchone()
+        name = (row[1] if row else "") or ""
+        cur.execute("""
+            SELECT c.peak_x FROM calls c JOIN callers h ON h.id = c.caller_id
+            WHERE h.handle = %s OR c.filer_handle = %s""", (h, h))
+        mults = [r[0] for r in cur.fetchall() if r[0] is not None]
+        filed = cur.rowcount
+        avg = round((sorted(mults)[len(mults) // 2] - 1) * 100) if mults else 0
+        img = profile_card(h, name, filed, len(mults), avg)
+    return Response(img, media_type="image/png",
+                    headers={"Cache-Control": "public, s-maxage=60"})
 
 
 @app.get("/api/stats")
