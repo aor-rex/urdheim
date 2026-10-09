@@ -55,10 +55,29 @@ def seen_path() -> str:
                           os.path.join(os.path.dirname(__file__), "seen.json"))
 
 
-SEEN_VERSION = 2
+SEEN_VERSION = 3
 
 # Replies are notifications: file everything, but only ping fresh tags.
 FRESH_REPLY_SECS = 3600
+
+
+def _true_now() -> float:
+    """Wall-clock independent of the host: latest Robinhood block ts.
+    (One host runs ~4h fast; X mention times are real UTC.)"""
+    try:
+        import httpx
+        r = httpx.post("https://rpc.mainnet.chain.robinhood.com",
+                       json={"jsonrpc": "2.0", "id": 1,
+                             "method": "eth_getBlockByNumber",
+                             "params": ["latest", False]},
+                       timeout=15)
+        ts = (r.json().get("result") or {}).get("timestamp", "")
+        if ts:
+            return float(int(ts, 16))
+    except Exception:
+        pass
+    import time as _t
+    return _t.time()
 
 
 def load_seen() -> set:
@@ -436,8 +455,7 @@ def run_once(dry: bool = False, test: str = "") -> None:
         if dry:
             print(f"WOULD REPLY @{m['author']}: {reply[:200]}")
         else:
-            import time as _time
-            age = (_time.time() - m["ts"]
+            age = (_true_now() - m["ts"]
                    if m.get("ts") else 0)
             if m.get("ts") and age > FRESH_REPLY_SECS:
                 print(f"stale @{m['author']}: filed silent "
