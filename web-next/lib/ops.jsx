@@ -64,7 +64,7 @@ export default function OpsPanel() {
     <div style={{ borderTop: '1px solid #2b2519', paddingTop: 22, marginTop: 6 }}>
       <div className="sans" style={{ display: 'flex', alignItems: 'center', gap: 8,
         fontSize: 13, letterSpacing: 4, color: '#c9a227', margin: '0 28px 16px' }}>
-        <ShieldCheck size={15} />OPS</div>
+        <ShieldCheck size={15} />ADMIN</div>
       {msg && <div className="sans" style={{ ...row, margin: '0 28px 14px', color: '#c9a227' }}>{msg}</div>}
 
       <div className="sans" style={sec}>
@@ -72,8 +72,18 @@ export default function OpsPanel() {
         {!queue && <div style={row}>loading…</div>}
         {queue && Object.entries(queue.counts || {}).map(([k, n]) => (
           <div key={k} style={row}>{k}: <b style={{ color: '#e8e0cf' }}>{n}</b></div>))}
-        {(queue && queue.queue || []).slice(0, 8).map((q, i) => (
-          <div key={i} style={{ ...row, wordBreak: 'break-all' }}>{q.status} · {q.caller || '—'} · {String(q.at).slice(0, 16)}</div>))}
+        {(queue && queue.queue || []).slice(0, 8).map((q, i) => {
+          const u = String(q.caller || '—');
+          const short = u.length > 24 ? u.slice(0, 16) + '…' + u.slice(-6) : u;
+          return (
+            <div key={i} style={{ ...row, fontSize: 13, color: '#e8e0cf' }}>
+              <b style={{ color: q.status === 'rejected' ? '#c0574a' : '#7fb069' }}>{q.status}</b>
+              {' · @' + short.replace(/^@/, '').split(':')[0]}
+              <div style={{ fontSize: 11, color: '#8a7f63', wordBreak: 'break-all' }}>
+                {(u.split(':')[1] || '') + ' · ' + String(q.at).slice(0, 16)}
+              </div>
+            </div>);
+        })}
       </div>
 
       <div className="sans" style={sec}>
