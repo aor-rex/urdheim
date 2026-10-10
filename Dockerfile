@@ -21,7 +21,13 @@ COPY receiver ./receiver
 COPY schema.sql migrate.sql ./
 
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+ && for s in api receiver poll snap listen; do \
+      printf '#!/bin/sh\nexec /entrypoint.sh %s "$@"\n' "$s" > /usr/local/bin/$s \
+      && chmod +x /usr/local/bin/$s; done
+# ^ service shims: Dokploy puts the app command ("snap", "poll", ...)
+#   in the executable slot on fresh deploys, bypassing image ENTRYPOINT.
+#   A shim on PATH makes `snap` resolve no matter which slot it lands in.
 
 EXPOSE 8091
 ENTRYPOINT ["/entrypoint.sh"]
