@@ -50,7 +50,11 @@ def run(conn, live: bool = False, allow: bool = False) -> dict:
         print("weekly: no calls this week, nothing to post", flush=True)
         return {"posted": False, "reason": "empty week"}
     text = fmt_week(rows)
-    res = post(text, dry=not live, allow_live=allow)
+    try:
+        res = post(text, dry=not live, allow_live=allow)
+    except Exception as e:
+        print(f"weekly FAILED: {str(e)[:120]}", flush=True)
+        return {"posted": False, "reason": "send failed", "text": text}
     print(f"weekly: dry={res.get('dry')} chars={len(text)}", flush=True)
     return {"posted": bool(res.get("live")), "dry": bool(res.get("dry")),
             "text": text}

@@ -58,7 +58,14 @@ def run(conn, live: bool = False, allow: bool = False) -> list:
     done = []
     for d in due(conn):
         text = fmt_quote(d["caller"], d["coin"], d["m"], d["call_id"])
-        res = quote(d["post_id"], text, dry=not live, allow_live=allow)
+        try:
+            res = quote(d["post_id"], text, dry=not live, allow_live=allow)
+        except Exception as e:
+            # never mark quoted on failure — retried next round
+            print(f"milestone {d['coin']} {d['m']}x FAILED: {str(e)[:120]}",
+                  flush=True)
+            done.append({**d, "text": text, "sent": False, "error": True})
+            continue
         if res.get("live"):
             with conn.cursor() as cur:
                 cur.execute(
