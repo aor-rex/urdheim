@@ -80,12 +80,19 @@ EOF
     # reprice open calls, every SNAP_EVERY (default 15 min)
     while true; do
       python brain/snapshotter.py "${SNAP_LIMIT:-200}"
+      # milestone quotes: dry unless WRITE_LIVE=1
+      if [ "${WRITE_LIVE:-0}" = "1" ]; then FLAGS="--live --allow"; else FLAGS=""; fi
+      python listener/milestones.py $FLAGS
+      # weekly board: fridays only (script skips empty weeks itself)
+      [ "$(date -u +%u)" = 5 ] && python listener/weekly.py $FLAGS || true
       sleep "${SNAP_EVERY:-900}"
     done
     ;;
   listen)
     while true; do
       python -u listener/mentions.py --once 2>&1
+      # ask-confirm expiries: silence is never a position (cheap, idempotent)
+      python listener/askconfirm.py 2>&1 | tail -1
       sleep 60
     done
     ;;

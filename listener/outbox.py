@@ -4,8 +4,8 @@ Three verbs: reply (ask-confirm, receipts), quote (milestones),
 post (weekly board). All dry-run by default — live requires dry=False
 AND an explicit allow flag so tests can never tweet.
 
-Budget: free uny-x path first, every send appended to spend.jsonl.
-Daily cap 25 sends; over cap raises instead of tweeting.
+Budget: GetXAPI write path (proven live, $0.002/post, 7/day budget cap
+in brain.budget) + outbox day cap 25. Every send appended to spend.jsonl.
 """
 from __future__ import annotations
 
@@ -59,25 +59,24 @@ def _check(text: str, dry: bool, allow_live: bool) -> dict | None:
     return None
 
 
-def _client():
-    from unyx import UnyxClient
-    path = os.environ.get("LISTENER_COOKIES", "")
+def _gx(text: str) -> dict:
+    from poster.getxapi import post as gx_post
+    path = (os.environ.get("POSTER_COOKIES", "")
+            or os.environ.get("LISTENER_COOKIES", ""))
     if not path:
-        raise RuntimeError("outbox: no cookies — set LISTENER_COOKIES")
-    c = UnyxClient()
-    if not c.login_from_cookies(path):
-        raise RuntimeError("outbox: cookie login failed")
-    return c
+        raise RuntimeError("outbox: no cookies — set POSTER_COOKIES")
+    return gx_post(text, path, dry=False)
 
 
 def reply(post_id: str, text: str, dry: bool = True,
           allow_live: bool = False) -> dict:
+    """Plain @-mention post (GetXAPI has no threading). Threaded replies
+    to mentions go through mentions.send_reply, not here."""
     skip = _check(text, dry, allow_live)
     if skip:
         return {"verb": "reply", **skip, "post_id": post_id}
-    with _client() as c:
-        out = c.reply(post_id, text)
-    _log("outbox/reply")
+    out = _gx(text)
+    _log("outbox/reply", 0.002)
     return {"verb": "reply", "live": True, "out": out}
 
 
@@ -95,7 +94,6 @@ def post(text: str, dry: bool = True, allow_live: bool = False,
     skip = _check(text, dry, allow_live)
     if skip:
         return {"verb": verb, **skip, "post_id": post_id}
-    with _client() as c:
-        out = c.post(text)
-    _log(f"outbox/{verb}")
+    out = _gx(text)
+    _log(f"outbox/{verb}", 0.002)
     return {"verb": verb, "live": True, "out": out}

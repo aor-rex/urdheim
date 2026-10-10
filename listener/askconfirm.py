@@ -134,3 +134,13 @@ def expire(conn) -> int:
         n = cur.rowcount
         conn.commit()
         return n
+
+
+def main() -> None:
+    import psycopg
+    with psycopg.connect(os.environ["DB_URL"]) as conn:
+        print(f"expire: {expire(conn)} lapsed", flush=True)
+
+
+if __name__ == "__main__":
+    main()

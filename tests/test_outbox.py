@@ -1,43 +1,33 @@
-"""Phase-1 outbox tests. No network: unyx is stubbed, dry runs never touch it."""
+"""Phase-1 outbox tests. No network: poster.getxapi stubbed, dry never sends."""
 import os
 import sys
 import types
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# stub unyx before outbox imports it
+# stub poster.getxapi before outbox imports it
 calls = []
-unyx = types.ModuleType("unyx")
+pgx = types.ModuleType("poster.getxapi")
 
 
-class FakeClient:
-    def __enter__(self):
-        calls.append("login")
-        return self
-
-    def __exit__(self, *a):
-        return False
-
-    def login_from_cookies(self, path):
-        assert path == "/tmp/fake-cookies.json"
-        return True
-
-    def reply(self, pid, text):
-        calls.append(("reply", pid, text))
-        return {"id": "r1"}
-
-    def post(self, text):
-        calls.append(("post", text))
-        return {"id": "p1"}
+def fake_post(text, cookies_path, dry=False):
+    assert cookies_path == "/tmp/fake-cookies.json", cookies_path
+    assert dry is False
+    calls.append(text)
+    return {"id": "p1"}
 
 
-unyx.UnyxClient = FakeClient
-sys.modules["unyx"] = unyx
+pgx.post = fake_post
+poster = types.ModuleType("poster")
+poster.getxapi = pgx
+sys.modules["poster"] = poster
+sys.modules["poster.getxapi"] = pgx
 
-os.environ["LISTENER_COOKIES"] = "/tmp/fake-cookies.json"
+os.environ["POSTER_COOKIES"] = "/tmp/fake-cookies.json"
+os.environ["BUDGET_LEDGER"] = "/tmp/test-budget.jsonl"
 import listener.outbox as ob  # noqa: E402
 
-# 1. dry reply never touches the client
+# 1. dry reply never touches the sender
 r = ob.reply("123", "hello")
 assert r["dry"] and not r["live"] and calls == [], r
 
@@ -45,15 +35,14 @@ assert r["dry"] and not r["live"] and calls == [], r
 r = ob.reply("123", "hello", dry=False)
 assert not r["live"] and r["reason"] == "no-allow" and calls == [], r
 
-# 3. live reply goes through
+# 3. live reply goes through the proven path
 r = ob.reply("123", "hello", dry=False, allow_live=True)
-assert r["live"] and calls == ["login", ("reply", "123", "hello")], (r, calls)
+assert r["live"] and calls == ["hello"], (r, calls)
 
 # 4. quote appends tweet url
 calls.clear()
 r = ob.quote("999", "called it", dry=False, allow_live=True)
-assert r["verb"] == "quote" and calls[-1][0] == "post" \
-    and "x.com/i/status/999" in calls[-1][1], (r, calls)
+assert r["verb"] == "quote" and "x.com/i/status/999" in calls[-1], (r, calls)
 
 # 5. over-280 refused before any send
 calls.clear()
