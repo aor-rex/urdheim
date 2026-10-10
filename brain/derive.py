@@ -92,19 +92,20 @@ def hamming(a: int, b: int) -> int:
 
 def describe_image(png: bytes) -> str | None:
     """Vision fallback: Muse Spark reads the meme, returns a short
-    description of distinctive elements for ticker matching. Needs
-    MODEL_API_KEY in env (Meta Model API, OpenAI-compatible).
-    No key, bad key, or any failure -> None, never a guess."""
+    description of distinctive elements for ticker matching. Runs on
+    the same model Rex uses (opencode Go, OpenAI-compatible).
+    Needs OPENCODE_GO_API_KEY in env. Any failure -> None, never a guess."""
     import base64
-    key = os.environ.get("MODEL_API_KEY", "")
+    key = os.environ.get("OPENCODE_GO_API_KEY", "")
     if not key or not png:
         return None
-    model = os.environ.get("VISION_MODEL", "muse-spark-1.3")
+    base = os.environ.get("VISION_BASE", "https://opencode.ai/zen/go/v1")
+    model = os.environ.get("VISION_MODEL", "muse-spark-1.3-contributor")
     try:
         import httpx
         b64 = base64.b64encode(png).decode()
         r = httpx.post(
-            "https://api.meta.ai/v1/chat/completions",
+            base.rstrip("/") + "/chat/completions",
             headers={"Authorization": f"Bearer {key}"},
             json={"model": model,
                   "max_tokens": 120,
