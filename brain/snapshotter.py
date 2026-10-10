@@ -47,6 +47,17 @@ def judge(entry, peak_x, now, liq, max_liq, called_at) -> str:
     return "open"
 
 
+MILESTONES = (3, 5, 10)
+
+
+def crossings(prev: dict, peak_x: float | None) -> list:
+    """Which thresholds freshly crossed. Pure — unit-tested, no DB."""
+    if not peak_x:
+        return []
+    return [m for m in MILESTONES
+            if peak_x >= m and not prev.get(f"hit_{m}x")]
+
+
 def main() -> None:
     limit = int(sys.argv[1]) if len(sys.argv) > 1 else 200
     with psycopg.connect(os.environ["DB_URL"]) as conn, conn.cursor() as cur:
@@ -81,6 +92,14 @@ def main() -> None:
                 """UPDATE calls SET peak = %s, peak_at = %s,
                                   peak_x = %s, state = %s
                    WHERE id = %s""", (peak, peak_at, peak_x, state, cid))
+            cur.execute(
+                """SELECT hit_3x, hit_5x, hit_10x FROM calls WHERE id = %s""",
+                (cid,))
+            prev = dict(zip(("hit_3x", "hit_5x", "hit_10x"), cur.fetchone()))
+            for m in crossings(prev, peak_x):
+                cur.execute(
+                    f"UPDATE calls SET hit_{m}x = TRUE WHERE id = %s", (cid,))
+                print(f"MILESTONE id={cid} {m}x", flush=True)
             px = f"{peak_x:.2f}x" if peak_x else "n/a"
             print(f"{state:10s} id={cid} peak_x={px} liq=${liq:,.0f}",
                   flush=True)
