@@ -28,11 +28,12 @@ COSTS = {
     "model/detect": 0.0,
     "model/intent": 0.0,
     "model/writer": 0.0,
+    "model/vision": 0.0,
 }
 
 READ_KINDS = {"user/tweets", "monitor/add", "monitor/remove", "monitor/list"}
 WRITE_KINDS = {"tweet/create"}
-MODEL_KINDS = {"model/detect", "model/intent", "model/writer"}
+MODEL_KINDS = {"model/detect", "model/intent", "model/writer", "model/vision"}
 
 
 class BudgetStop(Exception):

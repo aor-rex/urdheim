@@ -92,39 +92,57 @@ def hamming(a: int, b: int) -> int:
 
 def describe_image(png: bytes) -> str | None:
     """Vision fallback: Muse Spark reads the meme, returns a short
-    description of distinctive elements for ticker matching. Runs on
-    the same model Rex uses (opencode Go, OpenAI-compatible).
-    Needs OPENCODE_GO_API_KEY in env. Any failure -> None, never a guess."""
+    description of distinctive elements for ticker matching. Same
+    convention as detective: OPENCODE_API_KEY + OPENCODE_API_BASE +
+    OPENCODE_API_PATH, VISION_MODEL for the model name, budget-guarded.
+    Any failure -> None, never a guess."""
     import base64
-    key = os.environ.get("OPENCODE_GO_API_KEY", "")
+    from brain.detective import API_BASE, API_PATH, SESSION
+    from brain.budget import allow, log
+    key = os.environ.get("OPENCODE_API_KEY", "")
+    model = os.environ.get("VISION_MODEL", "muse-spark-1.3-contributor")
     if not key or not png:
         return None
-    base = os.environ.get("VISION_BASE", "https://opencode.ai/zen/go/v1")
-    model = os.environ.get("VISION_MODEL", "muse-spark-1.3-contributor")
+    ok, _ = allow("model/vision")
+    if not ok:
+        return None
+    prompt = ("Describe this meme in under 40 words. Name any character, "
+              "animal, object, or readable text you see.")
     try:
         import httpx
         b64 = base64.b64encode(png).decode()
-        r = httpx.post(
-            base.rstrip("/") + "/chat/completions",
-            headers={"Authorization": f"Bearer {key}"},
-            json={"model": model,
-                  "max_tokens": 120,
-                  "messages": [{
-                      "role": "user",
-                      "content": [
-                          {"type": "text",
-                           "text": ("Describe this meme in under 40 words. "
-                                    "Name any character, animal, object, or "
-                                    "readable text you see.")},
-                          {"type": "image_url",
-                           "image_url": {
-                               "url": f"data:image/png;base64,{b64}"}}]}]},
-            timeout=60)
+        headers = {"Authorization": "Bearer " + key,
+                   "x-opencode-session": SESSION,
+                   "User-Agent": "urdheim/1.0"}
+        if API_PATH.endswith("chat/completions"):
+            payload = {"model": model, "max_tokens": 120,
+                       "messages": [{"role": "user", "content": [
+                           {"type": "text", "text": prompt},
+                           {"type": "image_url", "image_url": {
+                               "url": f"data:image/png;base64,{b64}"}}]}]}
+        else:
+            payload = {"model": model, "input": [{
+                "role": "user", "content": [
+                    {"type": "input_text", "text": prompt},
+                    {"type": "input_image",
+                     "image_url": f"data:image/png;base64,{b64}"}]}]}
+        r = httpx.post(API_BASE + API_PATH, headers=headers,
+                       json=payload, timeout=60)
         if r.status_code != 200:
             return None
-        text = (r.json().get("choices", [{}])[0].get("message", {})
-                .get("content", "") or "").strip()
-        return text or None
+        log("model/vision")
+        body = r.json()
+        if "choices" in body:
+            text = (body["choices"][0].get("message", {})
+                    .get("content", "") or "")
+        else:
+            chunks = []
+            for item in body.get("output", []):
+                for part in item.get("content", []):
+                    if part.get("type") == "output_text":
+                        chunks.append(part.get("text", ""))
+            text = "".join(chunks)
+        return text.strip() or None
     except Exception:
         return None
 

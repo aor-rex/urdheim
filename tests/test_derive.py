@@ -40,14 +40,15 @@ assert hamming(h1, h3) > 32, hamming(h1, h3)
 print("dhash: identical 0, inverse far")
 
 # --- vision: no key -> None, mock transport parses the reply ---
-assert describe_image(grad()) is None  # no OPENCODE_GO_API_KEY in test env
+assert describe_image(grad()) is None  # no OPENCODE_API_KEY in test env
 import httpx
 from brain import derive as _dz
 
 
 def _fake_post(url, headers=None, json=None, timeout=None):
-    assert "opencode.ai" in url and json["model"] == "muse-spark-1.3-contributor"
-    assert json["messages"][0]["content"][1]["type"] == "image_url"
+    assert "opencode" in url
+    assert json["model"] == "muse-spark-1.3-contributor"
+    assert headers.get("x-opencode-session") == "urdheim-brain"
     req = httpx.Request("POST", url)
     return httpx.Response(200, json={
         "choices": [{"message": {"content": "a green frog holding a coin"}}]},
@@ -56,11 +57,11 @@ def _fake_post(url, headers=None, json=None, timeout=None):
 
 _orig = httpx.post
 httpx.post = _fake_post
-os.environ["OPENCODE_GO_API_KEY"] = "test-key"
+os.environ["OPENCODE_API_KEY"] = "test-key"
 try:
     assert describe_image(grad()) == "a green frog holding a coin"
 finally:
-    del os.environ["OPENCODE_GO_API_KEY"]
+    del os.environ["OPENCODE_API_KEY"]
     httpx.post = _orig
 print("describe_image: keyed path parses, keyless refuses")
 
