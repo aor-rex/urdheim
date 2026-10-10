@@ -388,6 +388,13 @@ def execute(author: str, text: str, conn, post_id: str = "",
                     ask = handle_ask(conn, author, post_id, mints[0],
                                      parent.get("id", ""))
                     return ask["text"]
+        from brain.hints import is_hint, resolve, file_hinted
+        ticker = is_hint(text)
+        if ticker and post_id and post_id != "test-mode-no-id":
+            lead = resolve(ticker)
+            if lead:
+                return file_hinted(conn, author, ticker, lead,
+                                   post_id)["text"]
     intent = classify_mention(author, text)
     print(f"intent @{author}: {intent}", flush=True)
     kind, handle, mint = intent["intent"], intent["handle"], intent["mint"]
