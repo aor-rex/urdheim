@@ -125,6 +125,8 @@ def parse_raw_tweet(raw: dict) -> dict | None:
         return {"id": leg.get("id_str") or res.get("rest_id", ""),
                 "author": uleg.get("screen_name", "") or "?",
                 "text": text, "ts": ts,
+                "likes": leg.get("favorite_count", 0) or 0,
+                "reposts": leg.get("retweet_count", 0) or 0,
                 "reply_to": leg.get("in_reply_to_status_id_str", "") or ""}
     except (KeyError, TypeError, AttributeError):
         return None
@@ -369,6 +371,23 @@ def execute(author: str, text: str, conn, post_id: str = "",
     """Brain intent -> action. Returns reply text or None (silence)."""
     if not is_allowed(conn, author):
         return signin_nudge(conn, author)
+    if conn is not None:
+        from listener.askconfirm import (handle_ask, handle_confirm,
+                                         is_ca_ask, ASK_MIN_LIKES)
+        from watcher.common import find_cas
+        hit = handle_confirm(conn, author, text)
+        if hit:
+            return hit["text"]
+        if (is_ca_ask(text) and c is not None and post_id
+                and post_id != "test-mode-no-id"):
+            parent = parent_context(c, post_id)
+            if parent:
+                mints = find_cas(parent.get("text") or "")
+                likes = parent.get("likes", 0) or 0
+                if mints and likes >= ASK_MIN_LIKES:
+                    ask = handle_ask(conn, author, post_id, mints[0],
+                                     parent.get("id", ""))
+                    return ask["text"]
     intent = classify_mention(author, text)
     print(f"intent @{author}: {intent}", flush=True)
     kind, handle, mint = intent["intent"], intent["handle"], intent["mint"]

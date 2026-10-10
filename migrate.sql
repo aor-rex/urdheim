@@ -55,6 +55,22 @@ ALTER TABLE calls ADD COLUMN IF NOT EXISTS hit_10x BOOLEAN NOT NULL DEFAULT FALS
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS quoted_3x BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS quoted_5x BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS quoted_10x BOOLEAN NOT NULL DEFAULT FALSE;
+-- ask-confirm: CA askers get receipts. asked -> confirmed | expired.
+CREATE TABLE IF NOT EXISTS asks (
+  id            SERIAL PRIMARY KEY,
+  asker         TEXT NOT NULL,
+  mint          TEXT NOT NULL,
+  chain         TEXT NOT NULL DEFAULT 'solana',
+  ask_post_id   TEXT NOT NULL,
+  parent_post_id TEXT NOT NULL DEFAULT '',
+  price_at_ask  DOUBLE PRECISION,
+  mcap_at_ask   DOUBLE PRECISION,
+  status        TEXT NOT NULL DEFAULT 'asked',  -- asked|confirmed|expired
+  asked_at      TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (asker, ask_post_id)
+);
+-- receipt kinds: call (tag flow) | asked (ask-confirm) | hinted (soft-shill)
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'call';
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS state TEXT NOT NULL DEFAULT 'open';
 CREATE INDEX IF NOT EXISTS idx_calls_state ON calls(state);
 
