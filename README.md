@@ -37,13 +37,3 @@ Live at https://urdheim.zone.id.
 
 Local pg over `/tmp` socket, `DB_URL` env. Copy `.env.example` to
 `.env` — shapes only in the repo, values never.
-
-## Deploy
-
-Dokploy, push → rebuild. Secrets live in dokploy env, never in code.
-
-## Conventions
-
-- Python throughout. No new deps without asking.
-- Never guess an address.
-- UI: Lucide icons, never emoji. Dark + warm amber/copper `#c9a227`.
