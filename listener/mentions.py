@@ -283,9 +283,9 @@ def filed_reply(caller: str, mint: str, snap: dict | None = None) -> str:
     # so repeated filings don't trip the duplicate-text filter either.
     who = (caller or "")[:20]
     variants = [
-        f"logged {tick}@{who} — {short} | entry @ ${ptxt}",
-        f"{tick}@{who} on the books — {short} @ ${ptxt}",
-        f"receipt filed: {tick}@{who} {short} | in @ ${ptxt}",
+        f"logged {tick}@{who} — {short} | entry @ ${ptxt} · full receipt via bio link",
+        f"{tick}@{who} on the books — {short} @ ${ptxt} · full receipt via bio link",
+        f"receipt filed: {tick}@{who} {short} | in @ ${ptxt} · see bio link",
     ]
     return variants[hash(str(caller) + short) % len(variants)][:280]
 
