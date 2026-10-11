@@ -224,20 +224,20 @@ def caller_file(conn, handle: str) -> str | None:
 
 
 def load_seeds() -> list[str]:
-    """Watchlist from the watched table. DB down → the 3 defaults, never a file."""
+    """Watchlist from the watched table. Nothing hardcoded — empty table
+    means tags-only intake, which is the default."""
     try:
         conn = db()
         if conn is None:
-            return ["degenreck", "devvaintnohobby", "Tally__DE"]
+            return []
         with conn, conn.cursor() as cur:
             cur.execute("SELECT handle FROM watched WHERE active ORDER BY added_at")
             rows = [r[0] for r in cur.fetchall()]
             conn.close()
-            if rows:
-                return rows
+            return rows
     except Exception:
         pass
-    return ["degenreck", "devvaintnohobby", "Tally__DE"]
+    return []
 
 
 def enroll_caller(handle: str) -> str:
