@@ -9,7 +9,7 @@ const SITE = process.env.NEXT_PUBLIC_SITE || 'https://urdheim.zone.id';
 export const metadata = {
   metadataBase: new URL(SITE),
   title: 'Urdheim — every call gets a receipt',
-  description: 'KOL accountability for memecoins on Solana and Robinhood Chain. Calls filed from X, entry frozen, verdict when the chart speaks.',
+  description: 'Shill receipts for memecoins on Solana and Robinhood Chain. Calls filed from X, entry frozen, verdict when the chart speaks.',
   openGraph: {
     title: 'Urdheim — every call gets a receipt',
     description: 'Memecoin calls filed from X. Entry frozen at the post, verdict when the chart speaks.',
@@ -41,7 +41,7 @@ export default function Landing() {
       </header>
       <main>
         <section className="hero">
-          <p className="eyebrow">KOL accountability, on Solana and Robinhood Chain</p>
+          <p className="eyebrow">Shill receipts, on Solana and Robinhood Chain</p>
           <h1>Every call gets<br />a <ScrambleWord /></h1>
           <p className="lede">
             Urdheim files memecoin calls made on X. Entry price frozen at the moment
