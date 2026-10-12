@@ -3,7 +3,7 @@
 import {
   Heart, Repeat, Quote, Eye, Flame, Hourglass,
   ShieldCheck, ShieldX, Skull, BadgeCheck, LogIn,
-  Trophy, TrendingUp, Scale, Medal, Link2, Share2,
+  Trophy, TrendingUp, Scale, Medal, Link2, Share2, Tag,
 } from 'lucide-react';
 import { avatar, fmtCount, timeAgo, fmtPrice, API_BASE, fetchMe, signOut, warmCoin, warmProfile } from '../lib/api';
 import { useEffect, useState } from 'react';
@@ -64,13 +64,22 @@ export function Seal({ seal, mult }) {
 }
 
 function actionText(r) {
-  if (r.filed_via === 'form') return 'filed via form';
-  if (r.filed_via === 'tag') return 'filed';
+  if (r.filed_via === 'form') return 'tagged via form';
+  if (r.filed_via === 'tag') return 'tagged';
   return 'called';
+}
+
+// A tag receipt is second-hand: someone filed another caller's call.
+// Self-tags (filer == caller) render as caller cards.
+export function isTagReceipt(r) {
+  const f = (r.filer && r.filer.handle || '').toLowerCase();
+  const c = (r.caller && r.caller.handle || '').toLowerCase();
+  return !!f && !!c && f !== c;
 }
 
 export function Receipt({ r }) {
   const filer = r.filer || {};
+  const tag = isTagReceipt(r);
   const [copied, setCopied] = useState(false);
   const share = () => {
     try {
@@ -84,15 +93,20 @@ export function Receipt({ r }) {
     ? <b style={{ color: r.good ? '#7fb069' : '#c1443c', fontWeight: 400 }}>{fmtPrice(r.now)}</b>
     : <b style={{ fontWeight: 400 }}>awaiting snapshot</b>;
   return (
-    <div className="rcard" style={{ borderBottom: '1px solid #2b2519', display: 'flex', gap: 14 }}>
+    <div className="rcard" style={tag
+      ? { border: '1px dashed #5a4f3a', borderRadius: 6, padding: 18, margin: '0 0 14px', display: 'flex', gap: 14 }
+      : { border: '1px solid #c9a227', borderRadius: 6, padding: 18, margin: '0 0 14px', background: '#100d08', display: 'flex', gap: 14 }}>
       <Avatar url={filer.avatar} name={filer.name || filer.handle} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <PersonLine p={filer} action={actionText(r)} ts={r.ts} />
+        <PersonLine p={filer} action={tag ? 'tagged' : actionText(r)} ts={r.ts} />
         <div style={{ fontSize: 17, margin: '8px 0', lineHeight: 1.55 }}>
           {r.coin && r.coin !== '?' && <span style={{ color: '#c9a227' }}>${r.coin} </span>}
-          called by <a href={'/profile/' + r.caller.handle}
+          {tag ? (<>tagged via <a href={'/profile/' + r.caller.handle}
             onMouseEnter={() => warmProfile(r.caller.handle)}
-            style={{ color: '#f2ead6' }}>@{r.caller.handle}</a>
+            style={{ color: '#f2ead6' }}>@{r.caller.handle}</a>'s call</>)
+          : (<>called by <a href={'/profile/' + r.caller.handle}
+            onMouseEnter={() => warmProfile(r.caller.handle)}
+            style={{ color: '#f2ead6' }}>@{r.caller.handle}</a></>)}
           {r.then ? ', entry ' + fmtPrice(r.then) : ''}
         </div>
         <a href={'/coin/' + r.mint} className="sans"
@@ -101,7 +115,13 @@ export function Receipt({ r }) {
             border: '1px solid #2b2519', borderRadius: 3, padding: '6px 10px',
             display: 'inline-block', margin: '2px 0 4px', letterSpacing: '.3px',
             textDecoration: 'none', wordBreak: 'break-all' }}>{r.mint}</a>
+        {tag && (<div className="sans" style={{ fontSize: 12, color: '#5a4f35', marginTop: 8 }}>
+          following @{r.caller.handle} in · stamped at tag time</div>)}
         <div className="sans" style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 12, flexWrap: 'wrap' }}>
+          {tag && (<span className="sans" style={{ fontSize: 10, letterSpacing: 2, color: '#0c0a08',
+            background: '#5a4f3a', padding: '5px 10px', borderRadius: 2,
+            display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <Tag size={11} />VIA TAG</span>)}
           <Seal seal={r.seal} mult={r.mult} />
           {r.viral && <span className="sans" style={{ fontSize: 11, letterSpacing: 2, color: '#0c0a08',
             background: '#c9a227', padding: '6px 12px', borderRadius: 2,

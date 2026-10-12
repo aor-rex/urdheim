@@ -2,7 +2,7 @@
 import { use, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { apiProfile, fmtAvg, fmtCount, fetchMe, signOut } from '../../../lib/api';
-import { Avatar, Receipt, RailBox, RailRow, SignInBox, Medal, Link2, Share2, BadgeCheck } from '../../../lib/components';
+import { Avatar, Receipt, RailBox, RailRow, SignInBox, Medal, Link2, Share2, BadgeCheck, isTagReceipt } from '../../../lib/components';
 import { LogOut } from 'lucide-react';
 
 // Ops strings stay out of the shared chunks: only admin sessions load this.
@@ -32,6 +32,11 @@ export default function Profile({ params }) {
       {ops && <OpsPanel />}</div>
       <aside className="siderail"><SignInBox /></aside></>);
   const { profile: p, stats: s, receipts } = data;
+  const calls = receipts.filter((r) => !isTagReceipt(r));
+  const tags = receipts.filter((r) => isTagReceipt(r));
+  const secHead = (t) => (
+    <div className="sans" style={{ fontSize: 11, letterSpacing: 3, color: '#5a4f35',
+      padding: '20px 28px 4px' }}>{t}</div>);
   const best = receipts.filter((r) => r.mult !== null)
     .sort((a, b) => b.mult - a.mult)[0];
   const chains = {};
@@ -70,7 +75,10 @@ export default function Profile({ params }) {
         </div>
         {signedOut && (<div style={{ padding: '18px 28px 0' }}><SignInBox /></div>)}
         {ops && <OpsPanel />}
-        {receipts.map((r, i) => <Receipt key={r.mint + i} r={r} />)}
+        {calls.length > 0 && secHead('CALLS')}
+        {calls.map((r, i) => <Receipt key={'c' + r.mint + i} r={r} />)}
+        {tags.length > 0 && secHead('TAGS')}
+        {tags.map((r, i) => <Receipt key={'t' + r.mint + i} r={r} />)}
         {receipts.length === 0 && (
           <div style={{ padding: 40, fontStyle: 'italic', color: '#8a7f63' }}>
             Nothing filed yet. Tag @urdheim on a call post and it lands here.</div>)}
