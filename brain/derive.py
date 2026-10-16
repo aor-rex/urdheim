@@ -4,7 +4,7 @@
 Match stack, cheapest first:
   1. ticker text vs meme keywords (free, pure)
   2. image dHash: viral image vs token art (PIL, no model)
-  3. vision describe: EXTENSION POINT — no model wired yet, returns None
+  3. vision describe: last resort, keyless returns None, never guesses
   4. crowd pick: confirmation only, breaks near-ties, never decides alone
 
 Refuse when thin: no leader without margin AND minimum traction.

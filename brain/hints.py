@@ -61,14 +61,46 @@ def search_pools(ticker: str) -> list:
         return []
 
 
-def resolve(ticker: str, pools: list | None = None) -> dict | None:
-    """One clear pool or nothing. Crown refuses ties and thin traction."""
-    from brain.derive import crown
+def fetch_image(url: str, cap: int = 2_000_000) -> bytes | None:
+    """One meme image, capped. None on anything wrong — vision is optional."""
+    import httpx
+    try:
+        if not url or not url.startswith("http"):
+            return None
+        r = httpx.get(url, timeout=20, follow_redirects=True)
+        if r.status_code != 200:
+            return None
+        body = r.content
+        return body if body and len(body) <= cap else None
+    except Exception:
+        return None
+
+
+def resolve(ticker: str, pools: list | None = None,
+            image_png: bytes | None = None) -> dict | None:
+    """One clear pool or nothing. Crown refuses ties and thin traction.
+    Image is the last resort: vision describes the meme, the pool whose
+    symbol best matches those words becomes the crowd pick — which can
+    only confirm a leader, never crown one alone. Still refuses thin."""
+    from brain.derive import crown, describe_image, name_score
     pools = search_pools(ticker) if pools is None else pools
     if not pools:
         return None
     r = crown(pools, keywords=[ticker])
-    return r["leader"]
+    if r["leader"]:
+        return r["leader"]
+    if image_png:
+        desc = describe_image(image_png) or ""
+        words = [w.strip(".,!?#@:").lower() for w in desc.split()]
+        words = [w for w in words if len(w) > 2][:12]
+        if words:
+            pick = max(pools,
+                       key=lambda s: name_score(s.get("symbol", ""), words))
+            if name_score(pick.get("symbol", ""), words) > 0:
+                r2 = crown(pools, keywords=[ticker],
+                           crowd_pick=pick["mint"])
+                return r2["leader"]
+    return None
 
 
 HINT_TEMPLATES = [

@@ -122,11 +122,20 @@ def parse_raw_tweet(raw: dict) -> dict | None:
                 "%a %b %d %H:%M:%S %z %Y").timestamp()
         except Exception:
             ts = None
+        media = []
+        try:
+            for md in ((leg.get("entities") or {}).get("media") or []):
+                u = md.get("media_url_https") or md.get("media_url")
+                if md.get("type") == "photo" and u:
+                    media.append(u)
+        except Exception:
+            media = []
         return {"id": leg.get("id_str") or res.get("rest_id", ""),
                 "author": uleg.get("screen_name", "") or "?",
                 "text": text, "ts": ts,
                 "likes": leg.get("favorite_count", 0) or 0,
                 "reposts": leg.get("retweet_count", 0) or 0,
+                "media": media,
                 "reply_to": leg.get("in_reply_to_status_id_str", "") or ""}
     except (KeyError, TypeError, AttributeError):
         return None
@@ -161,6 +170,7 @@ def fetch_mentions(n: int = 20, c=None) -> list[dict]:
             "id": str(m.get("id", "")),
             "author": user.get("screen_name", "") or "",
             "text": m.get("text", "") or "",
+            "media": m.get("media") or [],
             "ts": _parse_ts(m.get("created_at", "")),
         })
     return items
@@ -374,7 +384,7 @@ def signin_nudge(conn, author: str) -> str | None:
 
 
 def execute(author: str, text: str, conn, post_id: str = "",
-            c=None) -> str | None:
+            c=None, media: list | None = None) -> str | None:
     """Brain intent -> action. Returns reply text or None (silence)."""
     if not is_allowed(conn, author):
         return signin_nudge(conn, author)
@@ -395,10 +405,15 @@ def execute(author: str, text: str, conn, post_id: str = "",
                     ask = handle_ask(conn, author, post_id, mints[0],
                                      parent.get("id", ""))
                     return ask["text"]
-        from brain.hints import is_hint, resolve, file_hinted
+        from brain.hints import is_hint, resolve, file_hinted, fetch_image
         ticker = is_hint(text)
         if ticker and post_id and post_id != "test-mode-no-id":
-            lead = resolve(ticker)
+            png = None
+            for u in (media or [])[:2]:
+                png = fetch_image(u)
+                if png:
+                    break
+            lead = resolve(ticker, image_png=png)
             if lead:
                 return file_hinted(conn, author, ticker, lead,
                                    post_id)["text"]
@@ -499,9 +514,11 @@ def run_once(dry: bool = False, test: str = "") -> None:
             if (not CA_RE.search(m["text"] or "")
                     and m["id"] and m["id"] != "test-mode-no-id"):
                 with client() as c:
-                    reply = execute(m["author"], m["text"], conn, m["id"], c)
+                    reply = execute(m["author"], m["text"], conn, m["id"], c,
+                                    m.get("media"))
             else:
-                reply = execute(m["author"], m["text"], conn, m["id"])
+                reply = execute(m["author"], m["text"], conn, m["id"],
+                                media=m.get("media"))
         except Exception as e:
             print(f"mention skip @{m['author']}: {str(e)[:120]}")
             continue

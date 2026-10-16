@@ -26,6 +26,23 @@ tie = [dict(solo[0]),
 assert resolve("MERRYMEN", pools=tie) is None, "copycat tie must refuse"
 print("resolve: solo wins, empty/tie refuse")
 
+# --- vision retry: tie breaks when image words match one contender ---
+import brain.derive as derive_mod
+_solo2 = [dict(solo[0]),
+          {"mint": "0xcopy", "chain": "robinhood", "symbol": "MERRYMENFROG",
+           "liq": 91000, "vol_h24": 405000, "txns_h24": 8100, "age_min": 310}]
+_orig_desc = None
+_real_describe = derive_mod.describe_image
+derive_mod.describe_image = lambda png: "a green frog holding a coin"
+got = resolve("MERRYMEN", pools=_solo2, image_png=b"fakepng")
+derive_mod.describe_image = _real_describe
+assert got and got["mint"] == "0xcopy", got
+# keyless vision (None) still refuses
+derive_mod.describe_image = lambda png: None
+assert resolve("MERRYMEN", pools=_solo2, image_png=b"fakepng") is None
+derive_mod.describe_image = _real_describe
+print("resolve: vision breaks ties, keyless still refuses")
+
 # --- filing: hinted kind, proposed phrasing, dupe-safe ---
 calls = []
 
