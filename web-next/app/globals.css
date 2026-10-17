@@ -76,7 +76,7 @@ a{color:#c9a227}
 .eyebrow{font-family:Verdana,sans-serif;font-size:11px;letter-spacing:3px;color:#5a4f35}
 .cta.gold{background:#c9a227;color:#0c0a08}
 .cta.line{border:1px solid #c9a227;color:#c9a227}
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid #2b2519;border-bottom:1px solid #2b2519}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:1px solid #2b2519;border-bottom:1px solid #2b2519}
 .step:first-child{border-left:none}
 .snum{font-family:Verdana,sans-serif;font-size:11px;letter-spacing:2px;color:#5a4f35;margin-bottom:14px}
 .closer{text-align:center;padding:70px 0}
