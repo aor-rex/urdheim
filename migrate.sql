@@ -91,3 +91,15 @@ CREATE TABLE IF NOT EXISTS filer_entries (
   UNIQUE (filer_handle, tag_post_id)
 );
 CREATE INDEX IF NOT EXISTS idx_filer_entries_filer ON filer_entries(filer_handle);
+CREATE TABLE IF NOT EXISTS meme_watches (
+  id            SERIAL PRIMARY KEY,
+  image_hash    TEXT NOT NULL UNIQUE,
+  keywords      TEXT NOT NULL DEFAULT '',
+  description   TEXT NOT NULL DEFAULT '',
+  post_id       TEXT NOT NULL DEFAULT '',
+  reporter      TEXT NOT NULL DEFAULT '',
+  status        TEXT NOT NULL DEFAULT 'watching',  -- watching|filed|expired
+  opened_at     TIMESTAMPTZ DEFAULT now(),
+  expires_at    TIMESTAMPTZ DEFAULT now() + INTERVAL '7 days'
+);
+CREATE INDEX IF NOT EXISTS idx_meme_watches_status ON meme_watches(status);

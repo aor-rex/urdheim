@@ -406,6 +406,7 @@ def execute(author: str, text: str, conn, post_id: str = "",
                                      parent.get("id", ""))
                     return ask["text"]
         from brain.hints import is_hint, resolve, file_hinted, fetch_image
+        from brain.watch import handle_meme
         ticker = is_hint(text)
         if ticker and post_id and post_id != "test-mode-no-id":
             png = None
@@ -417,12 +418,32 @@ def execute(author: str, text: str, conn, post_id: str = "",
             if lead:
                 return file_hinted(conn, author, ticker, lead,
                                    post_id)["text"]
+            if png:
+                return handle_meme(conn, png, post_id, author, [ticker])
     intent = classify_mention(author, text)
     print(f"intent @{author}: {intent}", flush=True)
     kind, handle, mint = intent["intent"], intent["handle"], intent["mint"]
     if handle.lower() == SELF:
         handle = ""
     if kind == "ignore":
+        # meme with no ticker: image + bullish chatter -> watch, not silence.
+        # plain chatter with an image stays silent — no bull, no watch.
+        if post_id and post_id != "test-mode-no-id" and (media or c is not None):
+            from brain.hints import fetch_image, BULL_RE
+            from brain.watch import handle_meme
+            if not (BULL_RE.search(text or "") or "$" in (text or "")):
+                return None
+            urls = list(media or [])
+            if not urls and c is not None:
+                try:
+                    p = parent_context(c, post_id)
+                    urls = (p or {}).get("media") or []
+                except Exception:
+                    urls = []
+            for u in urls[:2]:
+                png = fetch_image(u)
+                if png:
+                    return handle_meme(conn, png, post_id, author)
         return None
     if kind == "receipt_coin":
         m = mint or next(iter(CA_RE.findall(text or "")), "")

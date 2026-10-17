@@ -85,6 +85,12 @@ EOF
       python listener/milestones.py $FLAGS
       # weekly board: fridays only (script skips empty weeks itself)
       [ "$(date -u +%u)" = 5 ] && python listener/weekly.py $FLAGS || true
+      # meme watches: once a day (sentinel), dry unless WRITE_LIVE=1
+      DAYFILE="${WATCH_DAYFILE:-/tmp/watch.day}"
+      TODAY="$(date -u +%Y-%j)"
+      if [ ! -f "$DAYFILE" ] || [ "$(cat "$DAYFILE" 2>/dev/null)" != "$TODAY" ]; then
+        python brain/watch.py $FLAGS && echo "$TODAY" > "$DAYFILE" || true
+      fi
       sleep "${SNAP_EVERY:-900}"
     done
     ;;
