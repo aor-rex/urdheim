@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ScrollText, Tag, SearchCheck, Stamp, Scale, ArrowRight } from 'lucide-react';
+import { ScrollText, Tag, SearchCheck, Stamp, Scale, Radar, ArrowRight } from 'lucide-react';
 import { XIcon, GithubIcon } from '../lib/components';
 import { ScrambleWord } from '../lib/hero';
 import { LiveBar, FreshRows } from '../lib/landing-live';
@@ -25,10 +25,11 @@ export const metadata = {
 };
 
 const STEPS = [
-  [Tag, 'Tag the call', 'Reply to any call post with @urdheim. That tag is your filing.'],
+  [Tag, 'Tag the call', 'Tag @urdheim with track this plus the coin address. That tag is your filing.'],
   [SearchCheck, 'The detective reads it', 'Every tagged post is judged: real call, soft shill, or just chatting. Only real calls enter the record.'],
   [Stamp, 'The price freezes', 'Entry price snapshots at the moment of the call, before the chart moves and the story changes.'],
   [Scale, 'The verdict lands', 'Open calls get repriced. Green holds, red condemns. The receipt updates itself.'],
+  [Radar, 'No coin yet', 'Tag the meme anyway. Urdheim watches it and files the moment a pool shows up.'],
 ];
 
 export default function Landing() {

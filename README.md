@@ -14,6 +14,8 @@ Live at https://urdheim.zone.id.
 - Milestones (3x / 5x / 10x) and a Friday board post go out from the
   account. Soft mentions stay unconfirmed until volume agrees — a
   wrong address never ships.
+- Meme radar: a tagged meme with no coin yet opens a 7-day watch.
+  Rechecked daily, filed hinted the moment a pool clears traction.
 - Feed, board, coins, stats, profiles: Next.js frontend + Python API.
 
 ## Layout
