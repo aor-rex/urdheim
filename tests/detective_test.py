@@ -25,8 +25,13 @@ statements = []
 class FakeCur:
     def __enter__(self): return self
     def __exit__(self, *a): return False
-    def execute(self, q, p=None): statements.append((q, p))
-    def fetchone(self): return [7]
+    def execute(self, q, p=None):
+        statements.append((q, p))
+        self._last = q
+    def fetchone(self):
+        if "FROM calls WHERE caller_id" in (self._last or ""):
+            return None  # no recent same-coin call -> proceed to insert
+        return [7]
 
 
 class FakeConn:

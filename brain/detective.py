@@ -74,6 +74,19 @@ def record_call(item: dict, verdict: dict) -> int | None:
         cur.execute("SELECT id FROM callers WHERE handle = %s",
                     (item.get("author", "?"),))
         caller_id = cur.fetchone()[0]
+        if item.get("mint"):
+            # window dedupe: same caller + same coin within DEDUPE_HOURS
+            # is one call, not N. live tag path (enroll_call) is exempt —
+            # an explicit human tag always files.
+            hours = int(os.environ.get("DEDUPE_HOURS", "24"))
+            cur.execute(
+                """SELECT 1 FROM calls WHERE caller_id = %s AND mint = %s
+                   AND called_at > now() - (%s || ' hours')::interval
+                   LIMIT 1""",
+                (caller_id, item.get("mint"), str(hours)))
+            if cur.fetchone():
+                conn.commit()
+                return None
         snap = item.get("snapshot") or {}
         if not snap.get("price") and item.get("mint"):
             from watcher.common import snapshot_price
