@@ -455,6 +455,14 @@ def execute(author: str, text: str, conn, post_id: str = "",
     if kind == "receipt_caller":
         return caller_file(conn, handle) if handle else None
     if kind == "track_caller":
+        if not handle and c is not None and post_id and post_id != "test-mode-no-id":
+            # "track this user" under a post means the post's author.
+            try:
+                parent = parent_context(c, post_id)
+                if parent and parent.get("author"):
+                    handle = parent["author"]
+            except Exception:
+                pass
         return enroll_caller(handle) if handle else None
     if kind == "track_call":
         m = mint or next(iter(CA_RE.findall(text or "")), "")
